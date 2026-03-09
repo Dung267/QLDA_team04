@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Lịch sử chatbot{% endblock %}
+{% block content %}
+<h2>Lịch sử hội thoại</h2>
+
+<table>
+    <tr><th>Câu hỏi</th><th>Trả lời</th></tr>
+    {% for item in history %}
+    <tr>
+        <td>{{ item.question }}</td>
+        <td>{{ item.answer }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="2">Chưa có lịch sử hội thoại.</td></tr>
+    {% endfor %}
+</table>
+
+<p style="margin-top:16px;"><a href="/chatbot/ask/">Hỏi tiếp</a></p>
+{% endblock %}

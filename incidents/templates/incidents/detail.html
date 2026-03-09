@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết sự cố{% endblock %}
+{% block content %}
+<h2>Chi tiết sự cố #{{ incident.id }}</h2>
+
+<table>
+    <tr><th>Tiêu đề</th><td>{{ incident.title }}</td></tr>
+    <tr><th>Loại</th><td>{{ incident.incident_type }}</td></tr>
+    <tr><th>Mô tả</th><td>{{ incident.description }}</td></tr>
+    <tr><th>Trạng thái</th><td>{{ incident.status }}</td></tr>
+    <tr><th>Ưu tiên</th><td>{{ incident.priority }}</td></tr>
+    <tr><th>Khu vực</th><td>{{ incident.area }}</td></tr>
+    <tr><th>Tọa độ</th><td>{{ incident.latitude }}, {{ incident.longitude }}</td></tr>
+</table>
+
+<h3>Đính kèm</h3>
+<table>
+    <tr><th>Loại</th><th>File</th></tr>
+    {% for att in attachments %}
+    <tr>
+        <td>{{ att.file_type }}</td>
+        <td><a href="{{ att.file.url }}" target="_blank">{{ att.file.name }}</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="2">Không có file đính kèm.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -94,3 +94,13 @@ TEMPLATES = [
         },
     },
 ]
+
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
+
+CELERY_BEAT_SCHEDULE = {
+    "sync-weather-every-30-minutes": {
+        "task": "weather.tasks.sync_weather_for_all_areas",
+        "schedule": 1800.0,
+    },
+}

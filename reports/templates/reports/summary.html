@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo tổng hợp{% endblock %}
+{% block content %}
+<h2>Báo cáo tổng hợp</h2>
+<table>
+    <tr><th>Tổng số sự cố</th><td>{{ summary.total_incidents }}</td></tr>
+    <tr><th>Tổng số tuyến đường</th><td>{{ summary.total_roads }}</td></tr>
+    <tr><th>Tổng số ổ gà</th><td>{{ summary.total_potholes }}</td></tr>
+    <tr><th>Tổng số đèn giao thông</th><td>{{ summary.total_traffic_lights }}</td></tr>
+    <tr><th>Tổng số yêu cầu bảo trì</th><td>{{ summary.total_maintenance_requests }}</td></tr>
+</table>
+{% endblock %}

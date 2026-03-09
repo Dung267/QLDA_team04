@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Dự báo thời tiết{% endblock %}
+{% block content %}
+<h2>Dự báo thời tiết</h2>
+
+<form method="get">
+    <label>Thành phố</label>
+    <input type="text" name="city" value="{{ city }}">
+    <button type="submit">Xem dự báo</button>
+</form>
+
+{% if forecast %}
+<table>
+    <tr>
+        <th>Thời gian</th>
+        <th>Nhiệt độ</th>
+        <th>Thời tiết</th>
+    </tr>
+    {% for item in forecast.list|slice:":10" %}
+    <tr>
+        <td>{{ item.dt_txt }}</td>
+        <td>{{ item.main.temp }} °C</td>
+        <td>{{ item.weather.0.description }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Nhập kho{% endblock %}
+{% block content %}
+<h2>Thêm vật tư vào kho</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <label>Vật tư</label>
+    <select name="material_id" required>
+        <option value="">-- Chọn vật tư --</option>
+        {% for m in materials %}
+        <option value="{{ m.id }}">{{ m.name }} ({{ m.sku }})</option>
+        {% endfor %}
+    </select>
+
+    <label>Số lượng</label>
+    <input type="number" step="0.01" name="quantity" required>
+
+    <label>Ghi chú</label>
+    <textarea name="note"></textarea>
+
+    <button type="submit">Nhập kho</button>
+</form>
+{% endblock %}

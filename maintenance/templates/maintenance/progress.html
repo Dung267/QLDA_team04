@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Tiến độ bảo trì{% endblock %}
+{% block content %}
+<h2>Cập nhật tiến độ bảo trì</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <label>Yêu cầu bảo trì</label>
+    <select name="request_id" required>
+        <option value="">-- Chọn yêu cầu --</option>
+        {% for r in requests_qs %}
+        <option value="{{ r.id }}">#{{ r.id }} - {{ r.incident.title }} - {{ r.status }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Trạng thái mới</label>
+    <select name="status">
+        <option value="PENDING">PENDING</option>
+        <option value="ASSIGNED">ASSIGNED</option>
+        <option value="IN_PROGRESS">IN_PROGRESS</option>
+        <option value="DONE">DONE</option>
+        <option value="CANCELED">CANCELED</option>
+    </select>
+
+    <label>Ghi chú</label>
+    <textarea name="note"></textarea>
+
+    <button type="submit">Cập nhật tiến độ</button>
+</form>
+
+<h3>Danh sách yêu cầu</h3>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Sự cố</th>
+        <th>Ưu tiên</th>
+        <th>Khẩn cấp</th>
+        <th>Trạng thái</th>
+    </tr>
+    {% for r in requests_qs %}
+    <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.incident.title }}</td>
+        <td>{{ r.priority }}</td>
+        <td>{{ r.emergency }}</td>
+        <td>{{ r.status }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">Chưa có yêu cầu bảo trì.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

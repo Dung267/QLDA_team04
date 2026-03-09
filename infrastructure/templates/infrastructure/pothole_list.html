@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Danh sách ổ gà{% endblock %}
+{% block content %}
+<h2>Danh sách ổ gà</h2>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Đường</th>
+        <th>Mức độ</th>
+        <th>Trạng thái</th>
+        <th>Tọa độ</th>
+    </tr>
+    {% for pothole in potholes %}
+    <tr>
+        <td>{{ pothole.id }}</td>
+        <td>{{ pothole.road }}</td>
+        <td>{{ pothole.severity }}</td>
+        <td>{{ pothole.status }}</td>
+        <td>{{ pothole.latitude }}, {{ pothole.longitude }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">Chưa có dữ liệu.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

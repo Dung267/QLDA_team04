@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết đường{% endblock %}
+{% block content %}
+<h2>Chi tiết tuyến đường</h2>
+
+<table>
+    <tr><th>Tên</th><td>{{ road.name }}</td></tr>
+    <tr><th>Mã</th><td>{{ road.code }}</td></tr>
+    <tr><th>Khu vực</th><td>{{ road.area }}</td></tr>
+    <tr><th>Chiều dài</th><td>{{ road.length_m }}</td></tr>
+    <tr><th>Chiều rộng</th><td>{{ road.width_m }}</td></tr>
+    <tr><th>Năm xây dựng</th><td>{{ road.year_built }}</td></tr>
+    <tr><th>Tình trạng</th><td>{{ road.condition }}</td></tr>
+</table>
+
+<h3>Ổ gà liên quan</h3>
+<table>
+    <tr><th>ID</th><th>Mức độ</th><th>Trạng thái</th></tr>
+    {% for pothole in potholes %}
+    <tr>
+        <td>{{ pothole.id }}</td>
+        <td>{{ pothole.severity }}</td>
+        <td>{{ pothole.status }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">Không có ổ gà.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

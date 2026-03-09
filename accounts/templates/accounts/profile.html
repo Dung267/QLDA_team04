@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Hồ sơ{% endblock %}
+{% block content %}
+<h2>Hồ sơ người dùng</h2>
+
+<table>
+    <tr><th>Username</th><td>{{ user_obj.username }}</td></tr>
+    <tr><th>Email</th><td>{{ user_obj.email }}</td></tr>
+    <tr><th>Role</th><td>{{ user_obj.role|default:"-" }}</td></tr>
+    <tr><th>Phone</th><td>{{ user_obj.phone|default:"-" }}</td></tr>
+    <tr><th>Address</th><td>{{ user_obj.address|default:"-" }}</td></tr>
+</table>
+
+<p style="margin-top:16px;">
+    <a href="/accounts/update/">Cập nhật tài khoản</a> |
+    <a href="/accounts/password-change/">Đổi mật khẩu</a>
+</p>
+{% endblock %}

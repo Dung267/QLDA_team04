@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Thời tiết hiện tại{% endblock %}
+{% block content %}
+<h2>Thời tiết hiện tại</h2>
+
+<form method="get">
+    <label>Thành phố</label>
+    <input type="text" name="city" value="{{ city }}">
+    <button type="submit">Xem</button>
+</form>
+
+{% if weather %}
+<table>
+    <tr><th>Thành phố</th><td>{{ weather.name }}</td></tr>
+    <tr><th>Nhiệt độ</th><td>{{ weather.main.temp }} °C</td></tr>
+    <tr><th>Độ ẩm</th><td>{{ weather.main.humidity }}%</td></tr>
+    <tr><th>Thời tiết</th><td>{{ weather.weather.0.description }}</td></tr>
+    <tr><th>Gió</th><td>{{ weather.wind.speed }} m/s</td></tr>
+</table>
+{% endif %}
+{% endblock %}

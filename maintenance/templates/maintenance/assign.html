@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Tạo yêu cầu bảo trì{% endblock %}
+{% block content %}
+<h2>Tạo yêu cầu bảo trì</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <label>Sự cố</label>
+    <select name="incident_id" required>
+        <option value="">-- Chọn sự cố --</option>
+        {% for i in incidents %}
+        <option value="{{ i.id }}">#{{ i.id }} - {{ i.title }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Ưu tiên</label>
+    <select name="priority">
+        <option value="LOW">Thấp</option>
+        <option value="MEDIUM">Trung bình</option>
+        <option value="HIGH">Cao</option>
+        <option value="CRITICAL">Khẩn cấp</option>
+    </select>
+
+    <label><input type="checkbox" name="emergency"> Khẩn cấp</label>
+
+    <button type="submit">Tạo yêu cầu</button>
+</form>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Danh sách sự cố{% endblock %}
+{% block content %}
+<h2>Danh sách sự cố</h2>
+
+<p><a href="/incidents/report/">+ Gửi phản ánh mới</a></p>
+
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Tiêu đề</th>
+        <th>Loại</th>
+        <th>Trạng thái</th>
+        <th>Khu vực</th>
+        <th>Chi tiết</th>
+    </tr>
+    {% for incident in incidents %}
+    <tr>
+        <td>{{ incident.id }}</td>
+        <td>{{ incident.title }}</td>
+        <td>{{ incident.incident_type }}</td>
+        <td>{{ incident.status }}</td>
+        <td>{{ incident.area }}</td>
+        <td><a href="/incidents/{{ incident.id }}/">Xem</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">Chưa có sự cố.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

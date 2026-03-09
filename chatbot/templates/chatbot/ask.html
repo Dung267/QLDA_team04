@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Chatbot{% endblock %}
+{% block content %}
+<h2>Hỏi chatbot</h2>
+<form method="post">
+    {% csrf_token %}
+    <label>Câu hỏi</label>
+    <textarea name="question" placeholder="Ví dụ: Làm sao gửi phản ánh?" required></textarea>
+    <button type="submit">Gửi câu hỏi</button>
+</form>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Đăng ký{% endblock %}
+{% block content %}
+<h2>Đăng ký tài khoản</h2>
+<form method="post">
+    {% csrf_token %}
+    <label>Tên đăng nhập</label>
+    <input type="text" name="username" required>
+
+    <label>Email</label>
+    <input type="email" name="email" required>
+
+    <label>Vai trò</label>
+    <select name="role">
+        <option value="CITIZEN">Người dân</option>
+        <option value="OFFICER">Cán bộ</option>
+        <option value="TECHNICIAN">Nhân viên bảo trì</option>
+    </select>
+
+    <label>Mật khẩu</label>
+    <input type="password" name="password" required>
+
+    <label>Xác nhận mật khẩu</label>
+    <input type="password" name="confirm_password" required>
+
+    <button type="submit">Đăng ký</button>
+</form>
+<p><a href="/accounts/login/">Đã có tài khoản? Đăng nhập</a></p>
+{% endblock %}

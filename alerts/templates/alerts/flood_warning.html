@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Cảnh báo ngập{% endblock %}
+{% block content %}
+<h2>Cảnh báo ngập lụt</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <label>Khu vực</label>
+    <input type="text" name="location" placeholder="Ví dụ: Hải Châu" required>
+
+    <label>Mức độ</label>
+    <select name="severity">
+        <option value="LOW">Thấp</option>
+        <option value="MEDIUM">Trung bình</option>
+        <option value="HIGH">Cao</option>
+        <option value="CRITICAL">Khẩn cấp</option>
+    </select>
+
+    <label>Ghi chú</label>
+    <textarea name="note"></textarea>
+
+    <button type="submit">Tạo cảnh báo</button>
+</form>
+
+<h3>Danh sách cảnh báo demo</h3>
+<table>
+    <tr><th>Khu vực</th><th>Mức độ</th><th>Ghi chú</th></tr>
+    {% for a in alerts %}
+    <tr>
+        <td>{{ a.location }}</td>
+        <td>{{ a.severity }}</td>
+        <td>{{ a.note }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">Chưa có cảnh báo.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

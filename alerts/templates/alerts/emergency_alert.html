@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Cảnh báo khẩn cấp{% endblock %}
+{% block content %}
+<h2>Cảnh báo khẩn cấp</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <label>Loại sự cố</label>
+    <input type="text" name="disaster_type" placeholder="Ví dụ: Bão, lũ" required>
+
+    <label>Khu vực</label>
+    <input type="text" name="location" required>
+
+    <label>Cấp độ</label>
+    <select name="level">
+        <option value="LOW">Thấp</option>
+        <option value="MEDIUM">Trung bình</option>
+        <option value="HIGH">Cao</option>
+        <option value="CRITICAL">Khẩn cấp</option>
+    </select>
+
+    <button type="submit">Tạo cảnh báo</button>
+</form>
+
+<h3>Danh sách cảnh báo demo</h3>
+<table>
+    <tr><th>Loại sự cố</th><th>Khu vực</th><th>Cấp độ</th></tr>
+    {% for a in alerts %}
+    <tr>
+        <td>{{ a.disaster_type }}</td>
+        <td>{{ a.location }}</td>
+        <td>{{ a.level }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">Chưa có dữ liệu.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

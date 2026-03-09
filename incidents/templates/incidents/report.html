@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo sự cố{% endblock %}
+{% block content %}
+<h2>Gửi phản ánh sự cố</h2>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label>Khu vực</label>
+    <select name="area" required>
+        <option value="">-- Chọn khu vực --</option>
+        {% for area in areas %}
+        <option value="{{ area.id }}">{{ area.name }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Loại sự cố</label>
+    <select name="incident_type" required>
+        {% for val, text in incident_types %}
+        <option value="{{ val }}">{{ text }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Tiêu đề</label>
+    <input type="text" name="title" required>
+
+    <label>Mô tả</label>
+    <textarea name="description" required></textarea>
+
+    <label>Latitude</label>
+    <input type="text" name="latitude">
+
+    <label>Longitude</label>
+    <input type="text" name="longitude">
+
+    <label>Ảnh / video đính kèm</label>
+    <input type="file" name="attachment">
+
+    <button type="submit">Gửi phản ánh</button>
+</form>
+{% endblock %}

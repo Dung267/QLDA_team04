@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo tháng{% endblock %}
+{% block content %}
+<h2>Báo cáo theo tháng</h2>
+
+<h3>Sự cố</h3>
+<table>
+    <tr><th>Tháng</th><th>Số lượng</th></tr>
+    {% for row in incident_stats %}
+    <tr><td>{{ row.period|date:"m/Y" }}</td><td>{{ row.total }}</td></tr>
+    {% empty %}
+    <tr><td colspan="2">Không có dữ liệu.</td></tr>
+    {% endfor %}
+</table>
+
+<h3>Bảo trì</h3>
+<table>
+    <tr><th>Tháng</th><th>Số lượng</th></tr>
+    {% for row in maintenance_stats %}
+    <tr><td>{{ row.period|date:"m/Y" }}</td><td>{{ row.total }}</td></tr>
+    {% empty %}
+    <tr><td colspan="2">Không có dữ liệu.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

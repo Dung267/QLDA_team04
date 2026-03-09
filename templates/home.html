@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h2>Trang chủ</h2>
+<p>Đây là dashboard khung cho hệ thống quản lý hạ tầng đô thị.</p>
+
+<div class="cards">
+    <div class="card">
+        <h3>Tài khoản</h3>
+        <p>Đăng nhập, đăng ký, hồ sơ người dùng.</p>
+        <a href="/accounts/login/">Đi tới</a>
+    </div>
+    <div class="card">
+        <h3>Hạ tầng</h3>
+        <p>Đường, ổ gà, đèn giao thông.</p>
+        <a href="/infrastructure/roads/">Đi tới</a>
+    </div>
+    <div class="card">
+        <h3>Sự cố</h3>
+        <p>Phản ánh, danh sách và chi tiết sự cố.</p>
+        <a href="/incidents/list/">Đi tới</a>
+    </div>
+    <div class="card">
+        <h3>Bảo trì</h3>
+        <p>Yêu cầu, phân công, cập nhật tiến độ.</p>
+        <a href="/maintenance/create/">Đi tới</a>
+    </div>
+    <div class="card">
+        <h3>Vật tư</h3>
+        <p>Danh sách vật tư và giao dịch kho.</p>
+        <a href="/inventory/materials/">Đi tới</a>
+    </div>
+    <div class="card">
+        <h3>Báo cáo</h3>
+        <p>Thống kê và báo cáo tháng, quý, năm.</p>
+        <a href="/reports/summary/">Đi tới</a>
+    </div>
+</div>
+{% endblock %}

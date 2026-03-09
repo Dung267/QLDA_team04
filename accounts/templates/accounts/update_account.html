@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Cập nhật tài khoản{% endblock %}
+{% block content %}
+<h2>Cập nhật tài khoản</h2>
+<form method="post">
+    {% csrf_token %}
+    <label>Email</label>
+    <input type="email" name="email" value="{{ user_obj.email|default:'' }}">
+
+    <label>Số điện thoại</label>
+    <input type="text" name="phone" value="{{ user_obj.phone|default:'' }}">
+
+    <label>Địa chỉ</label>
+    <textarea name="address">{{ user_obj.address|default:'' }}</textarea>
+
+    <button type="submit">Lưu thay đổi</button>
+</form>
+{% endblock %}

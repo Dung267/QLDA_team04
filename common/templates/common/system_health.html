@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}System Health{% endblock %}
+{% block content %}
+<h2>Tình trạng hệ thống</h2>
+<table>
+    <tr><th>Application</th><td>{{ status }}</td></tr>
+    <tr><th>Database</th><td>{{ db_status }}</td></tr>
+    <tr><th>Django</th><td>{{ django_version }}</td></tr>
+    <tr><th>Python</th><td>{{ python_version }}</td></tr>
+</table>
+{% endblock %}

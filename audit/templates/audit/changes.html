@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}System Changes{% endblock %}
+{% block content %}
+<h2>Lịch sử thay đổi</h2>
+<table>
+    <tr>
+        <th>Thời gian</th>
+        <th>User</th>
+        <th>Hành động</th>
+        <th>Đối tượng</th>
+    </tr>
+    {% for c in changes %}
+    <tr>
+        <td>{{ c.action_time }}</td>
+        <td>{{ c.user }}</td>
+        <td>{{ c.change_message }}</td>
+        <td>{{ c.object_repr }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">Chưa có thay đổi.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

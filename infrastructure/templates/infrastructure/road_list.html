@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Danh sách đường{% endblock %}
+{% block content %}
+<h2>Danh sách tuyến đường</h2>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Tên đường</th>
+        <th>Chiều dài</th>
+        <th>Tình trạng</th>
+        <th>Chi tiết</th>
+    </tr>
+    {% for road in roads %}
+    <tr>
+        <td>{{ road.id }}</td>
+        <td>{{ road.name }}</td>
+        <td>{{ road.length_m }}</td>
+        <td>{{ road.condition }}</td>
+        <td><a href="/infrastructure/roads/{{ road.id }}/">Xem</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">Chưa có dữ liệu đường.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

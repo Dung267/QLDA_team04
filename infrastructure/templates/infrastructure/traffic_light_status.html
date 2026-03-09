@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Đèn giao thông{% endblock %}
+{% block content %}
+<h2>Trạng thái đèn giao thông</h2>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Mã</th>
+        <th>Vị trí</th>
+        <th>Trạng thái</th>
+        <th>Năm lắp</th>
+    </tr>
+    {% for item in traffic_lights %}
+    <tr>
+        <td>{{ item.id }}</td>
+        <td>{{ item.code }}</td>
+        <td>{{ item.location_name }}</td>
+        <td>{{ item.current_status }}</td>
+        <td>{{ item.installed_year }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">Chưa có dữ liệu đèn giao thông.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}
