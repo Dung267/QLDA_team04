@@ -1,29 +1,39 @@
 {% extends "base.html" %}
-{% block title %}Chi tiết đường{% endblock %}
 {% block content %}
-<h2>Chi tiết tuyến đường</h2>
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div><h4 class="fw-bold">{{ road.name }}</h4><span class="text-muted">{{ road.code }}</span></div>
+  <div class="d-flex gap-2">
+    {% if user.is_staff_member %}<a href="{% url 'infrastructure:road_edit' road.pk %}" class="btn btn-sm btn-outline-primary">Sửa</a>{% endif %}
+    <a href="{% url 'infrastructure:road_list' %}" class="btn btn-sm btn-outline-secondary">← Quay lại</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card mb-3"><div class="card-header fw-bold">Thông tin cơ bản</div><div class="card-body" style="font-size:.88rem">
+      <div class="mb-2"><b>Loại:</b> {{ road.get_direction_display }}</div>
+      <div class="mb-2"><b>Tình trạng:</b> <span class="badge bg-{% if road.status == 'good' %}success{% elif road.status == 'critical' %}danger{% else %}warning text-dark{% endif %}">{{ road.get_status_display }}</span></div>
+      <div class="mb-2"><b>Chất lượng:</b> {{ road.quality_score }}/5 ★</div>
+      <div class="mb-2"><b>Chiều dài:</b> {{ road.length_km }} km</div>
+      <div class="mb-2"><b>Chiều rộng:</b> {{ road.width_m }} m</div>
+      <div class="mb-2"><b>Số làn:</b> {{ road.lanes }}</div>
+      <div class="mb-2"><b>Năm XD:</b> {{ road.built_year|default:"—" }}</div>
+      <div class="mb-2"><b>Mật độ GT:</b> {{ road.get_traffic_density_display }}</div>
+      <div class="mb-2"><b>Khu vực:</b> {{ road.zone.name|default:"—" }}</div>
+      <div class="mb-2"><b>Đơn vị QL:</b> {{ road.managing_unit|default:"—" }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-8">
+    <div class="card mb-3"><div class="card-header fw-bold d-flex justify-content-between align-items-center"><span>Ổ gà ({{ potholes.count }})</span>{% if user.is_staff_member %}<a href="{% url 'infrastructure:pothole_create' road.pk %}" class="btn btn-sm btn-warning">+ Thêm ổ gà</a>{% endif %}</div>
+    <div class="card-body p-0"><table class="table mb-0 table-hover" style="font-size:.85rem"><thead class="table-light"><tr><th>Mức độ</th><th>Mô tả</th><th>Đã sửa</th><th>Ngày báo</th></tr></thead><tbody>
+    {% for p in potholes %}<tr><td><span class="badge bg-{% if p.severity == 'critical' %}danger{% elif p.severity == 'severe' %}warning text-dark{% else %}secondary{% endif %}">{{ p.get_severity_display }}</span></td><td>{{ p.description|truncatechars:50 }}</td><td>{% if p.is_repaired %}<span class="text-success">✓</span>{% else %}<span class="text-danger">✗</span>{% endif %}</td><td>{{ p.created_at|date:"d/m/Y" }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="text-center text-muted py-3">Không có ổ gà nào</td></tr>{% endfor %}
+    </tbody></table></div></div>
 
-<table>
-    <tr><th>Tên</th><td>{{ road.name }}</td></tr>
-    <tr><th>Mã</th><td>{{ road.code }}</td></tr>
-    <tr><th>Khu vực</th><td>{{ road.area }}</td></tr>
-    <tr><th>Chiều dài</th><td>{{ road.length_m }}</td></tr>
-    <tr><th>Chiều rộng</th><td>{{ road.width_m }}</td></tr>
-    <tr><th>Năm xây dựng</th><td>{{ road.year_built }}</td></tr>
-    <tr><th>Tình trạng</th><td>{{ road.condition }}</td></tr>
-</table>
-
-<h3>Ổ gà liên quan</h3>
-<table>
-    <tr><th>ID</th><th>Mức độ</th><th>Trạng thái</th></tr>
-    {% for pothole in potholes %}
-    <tr>
-        <td>{{ pothole.id }}</td>
-        <td>{{ pothole.severity }}</td>
-        <td>{{ pothole.status }}</td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="3">Không có ổ gà.</td></tr>
-    {% endfor %}
-</table>
+    <div class="card"><div class="card-header fw-bold">Lịch sử sửa chữa</div>
+    <div class="card-body p-0"><table class="table mb-0 table-hover" style="font-size:.85rem"><thead class="table-light"><tr><th>Ngày</th><th>Nội dung</th><th>Chi phí</th><th>Đơn vị</th></tr></thead><tbody>
+    {% for h in repair_history %}<tr><td>{{ h.repair_date|date:"d/m/Y" }}</td><td>{{ h.description|truncatechars:60 }}</td><td>{{ h.cost|floatformat:0 }} VNĐ</td><td>{{ h.contractor }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="text-center text-muted py-3">Chưa có lịch sử</td></tr>{% endfor %}
+    </tbody></table></div></div>
+  </div>
+</div>
 {% endblock %}

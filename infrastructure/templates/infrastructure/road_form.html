@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="fw-bold mb-4">{{ page_title }}</h4>
+{% if form %}
+<div class="card" style="max-width:700px"><div class="card-body">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
+<button type="submit" class="btn btn-primary">Luu</button> <a href="javascript:history.back()" class="btn btn-outline-secondary">H?y</a>
+</form>
+</div></div>
+{% else %}
+<div class="card"><div class="card-body"><p class="text-muted">N?i dung trang {{ page_title }}</p></div></div>
+{% endif %}
+{% endblock %}

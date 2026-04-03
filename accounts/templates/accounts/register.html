@@ -1,29 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Đăng ký{% endblock %}
 {% block content %}
-<h2>Đăng ký tài khoản</h2>
-<form method="post">
-    {% csrf_token %}
-    <label>Tên đăng nhập</label>
-    <input type="text" name="username" required>
-
-    <label>Email</label>
-    <input type="email" name="email" required>
-
-    <label>Vai trò</label>
-    <select name="role">
-        <option value="CITIZEN">Người dân</option>
-        <option value="OFFICER">Cán bộ</option>
-        <option value="TECHNICIAN">Nhân viên bảo trì</option>
-    </select>
-
-    <label>Mật khẩu</label>
-    <input type="password" name="password" required>
-
-    <label>Xác nhận mật khẩu</label>
-    <input type="password" name="confirm_password" required>
-
-    <button type="submit">Đăng ký</button>
-</form>
-<p><a href="/accounts/login/">Đã có tài khoản? Đăng nhập</a></p>
+<div class="d-flex justify-content-center py-4">
+<div class="card shadow" style="width:100%;max-width:500px;border-radius:16px">
+  <div class="card-body p-4">
+    <h5 class="fw-bold mb-4 text-center"><i class="bi bi-person-plus me-2 text-primary"></i>Đăng ký tài khoản</h5>
+    <form method="post">{% csrf_token %}
+      <div class="row g-3">
+        <div class="col-6"><label class="form-label">Họ</label>{{ form.last_name }}</div>
+        <div class="col-6"><label class="form-label">Tên</label>{{ form.first_name }}</div>
+        <div class="col-12"><label class="form-label">Tên đăng nhập *</label>{{ form.username }}</div>
+        <div class="col-12"><label class="form-label">Email</label>{{ form.email }}</div>
+        <div class="col-12"><label class="form-label">Số điện thoại</label>{{ form.phone }}</div>
+        <div class="col-6"><label class="form-label">Quận/Huyện</label>{{ form.district }}</div>
+        <div class="col-6"><label class="form-label">Phường/Xã</label>{{ form.ward }}</div>
+        <div class="col-6"><label class="form-label">Mật khẩu *</label>{{ form.password1 }}</div>
+        <div class="col-6"><label class="form-label">Xác nhận *</label>{{ form.password2 }}</div>
+      </div>
+      {% if form.errors %}<div class="alert alert-danger mt-3 small">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+      <button type="submit" class="btn btn-primary w-100 mt-3">Đăng ký</button>
+    </form>
+    <p class="text-center small mt-3">Đã có tài khoản? <a href="{% url 'accounts:login' %}">Đăng nhập</a></p>
+  </div>
+</div>
+</div>
 {% endblock %}

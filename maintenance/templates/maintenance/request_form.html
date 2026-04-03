@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="fw-bold mb-4"><i class="bi bi-plus-circle me-2 text-warning"></i>{{ page_title }}</h4>
+<div class="card" style="max-width:700px">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">{% csrf_token %}
+      <div class="mb-3"><label class="form-label fw-medium">Tiêu đề sự cố *</label>{{ form.title }}</div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><label class="form-label fw-medium">Loại sự cố *</label>{{ form.incident_type }}</div>
+        <div class="col-md-6"><label class="form-label fw-medium">Mức độ ưu tiên</label>{{ form.priority }}</div>
+      </div>
+      <div class="mb-3"><label class="form-label fw-medium">Mô tả chi tiết *</label>{{ form.description }}</div>
+      <div class="mb-3"><label class="form-label fw-medium">Địa chỉ cụ thể</label>{{ form.address }}</div>
+      <div class="mb-3"><label class="form-label fw-medium">Tuyến đường liên quan</label>{{ form.road }}</div>
+      <div class="mb-3">
+        <label class="form-label fw-medium">Đính kèm ảnh</label>
+        <input type="file" name="photos" class="form-control" accept="image/*" multiple>
+        <div class="form-text">Có thể chọn nhiều ảnh (JPG, PNG)</div>
+      </div>
+      <div class="mb-3 form-check">{{ form.is_anonymous }}<label class="form-check-label">Phản ánh ẩn danh</label></div>
+      <button type="submit" class="btn btn-warning fw-medium">Gửi phản ánh</button>
+      <a href="{% url 'maintenance:request_list' %}" class="btn btn-outline-secondary ms-2">Hủy</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

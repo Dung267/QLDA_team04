@@ -1,25 +1,36 @@
 {% extends "base.html" %}
-{% block title %}Danh sách đường{% endblock %}
 {% block content %}
-<h2>Danh sách tuyến đường</h2>
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Tên đường</th>
-        <th>Chiều dài</th>
-        <th>Tình trạng</th>
-        <th>Chi tiết</th>
-    </tr>
-    {% for road in roads %}
-    <tr>
-        <td>{{ road.id }}</td>
-        <td>{{ road.name }}</td>
-        <td>{{ road.length_m }}</td>
-        <td>{{ road.condition }}</td>
-        <td><a href="/infrastructure/roads/{{ road.id }}/">Xem</a></td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="5">Chưa có dữ liệu đường.</td></tr>
-    {% endfor %}
-</table>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold"><i class="bi bi-signpost-2 me-2 text-primary"></i>Danh sách tuyến đường</h4>
+  {% if user.is_staff_member %}<a href="{% url 'infrastructure:road_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Thêm đường</a>{% endif %}
+</div>
+<div class="card mb-3"><div class="card-body py-2">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-sm-4"><input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Tên hoặc mã đường..."></div>
+    <div class="col-sm-3"><select name="zone" class="form-select form-select-sm"><option value="">Tất cả khu vực</option>{% for z in zones %}<option value="{{ z.pk }}" {% if request.GET.zone == z.pk|stringformat:"s" %}selected{% endif %}>{{ z.name }}</option>{% endfor %}</select></div>
+    <div class="col-sm-3"><select name="status" class="form-select form-select-sm"><option value="">Tất cả trạng thái</option>{% for v,l in status_choices %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-sm-2"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i> Lọc</button></div>
+  </form>
+</div></div>
+<div class="card"><div class="card-body p-0">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0" style="font-size:.85rem">
+      <thead class="table-light"><tr><th>Mã</th><th>Tên đường</th><th>Loại</th><th>Tình trạng</th><th>Chất lượng</th><th>Khu vực</th><th>Mật độ GT</th><th></th></tr></thead>
+      <tbody>
+        {% for r in page_obj %}
+        <tr>
+          <td class="text-muted fw-medium">{{ r.code }}</td>
+          <td><a href="{% url 'infrastructure:road_detail' r.pk %}" class="text-decoration-none fw-medium">{{ r.name }}</a></td>
+          <td>{{ r.get_direction_display }}</td>
+          <td><span class="badge bg-{% if r.status == 'good' %}success{% elif r.status == 'bad' or r.status == 'critical' %}danger{% else %}warning text-dark{% endif %}">{{ r.get_status_display }}</span></td>
+          <td>{% for i in "12345" %}{% if forloop.counter <= r.quality_score %}★{% else %}☆{% endif %}{% endfor %}</td>
+          <td>{{ r.zone.name|default:"—" }}</td>
+          <td>{{ r.get_traffic_density_display }}</td>
+          <td><a href="{% url 'infrastructure:road_detail' r.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+        </tr>
+        {% empty %}<tr><td colspan="8" class="text-center py-4 text-muted">Không có tuyến đường nào</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div></div>
 {% endblock %}

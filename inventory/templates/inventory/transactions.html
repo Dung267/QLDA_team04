@@ -1,25 +1,34 @@
 {% extends "base.html" %}
-{% block title %}Giao dịch kho{% endblock %}
 {% block content %}
-<h2>Danh sách giao dịch kho</h2>
-<table>
-    <tr>
-        <th>Thời gian</th>
-        <th>Vật tư</th>
-        <th>Loại giao dịch</th>
-        <th>Số lượng</th>
-        <th>Ghi chú</th>
-    </tr>
-    {% for t in transactions %}
-    <tr>
-        <td>{{ t.created_at }}</td>
-        <td>{{ t.material }}</td>
-        <td>{{ t.transaction_type }}</td>
-        <td>{{ t.quantity }}</td>
-        <td>{{ t.note }}</td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="5">Chưa có giao dịch.</td></tr>
-    {% endfor %}
-</table>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold">{{ page_title|default:"Transactions" }}</h4>
+</div>
+{% if form %}
+<div class="card" style="max-width:700px"><div class="card-body">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
+<button type="submit" class="btn btn-primary">Luu</button> <a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">H?y</a>
+</form>
+</div></div>
+{% elif page_obj %}
+<div class="card"><div class="card-body p-0">
+<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
+<thead class="table-light"><tr><th>#</th><th>N?i dung</th><th>Tr?ng th�i</th><th>Ng�y t?o</th></tr></thead>
+<tbody>
+{% for item in page_obj %}
+<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>�</td><td>�</td></tr>
+{% empty %}<tr><td colspan="4" class="text-center py-4 text-muted">Chua c� d? li?u</td></tr>{% endfor %}
+</tbody>
+</table></div>
+{% if page_obj.has_other_pages %}
+<div class="p-3 d-flex justify-content-center"><nav><ul class="pagination pagination-sm mb-0">
+{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">�</a></li>{% endif %}
+<li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">�</a></li>{% endif %}
+</ul></nav></div>
+{% endif %}
+</div></div>
+{% else %}
+<div class="card"><div class="card-body"><p class="text-muted text-center py-3">N?i dung trang Transactions</p></div></div>
+{% endif %}
 {% endblock %}
