@@ -1,11 +1,13 @@
-# reports/urls.py
-
 from django.urls import path
 from . import views
 
+app_name = 'reports'
+
 urlpatterns = [
-    path('summary/', views.summary_report, name='summary_report'),  # Báo cáo tóm tắt
-    path('monthly/', views.monthly_report, name='monthly_report'),  # Báo cáo tháng
-    path('quarterly/', views.quarterly_report, name='quarterly_report'),  # Báo cáo quý
-    path('yearly/', views.yearly_report, name='yearly_report'),  # Báo cáo năm
+    path('', views.report_dashboard, name='dashboard'),
+    path('monthly/', views.monthly_report, name='monthly'),
+    path('quarterly/', views.quarterly_report, name='quarterly'),
+    path('yearly/', views.yearly_report, name='yearly'),
+    path('export/excel/', views.export_excel, name='export_excel'),
+    path('export/pdf/', views.export_pdf, name='export_pdf'),
 ]

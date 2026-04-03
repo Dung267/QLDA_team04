@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0 fw-bold">Bảng điều khiển</h4>
+  <span class="text-muted small">{{ request.user.get_full_name|default:request.user.username }} | {{ request.user.get_role_display }}</span>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-start border-primary border-4 p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Tổng tuyến đường</div>
+          <div class="fs-3 fw-bold">{{ stats.total_roads }}</div>
+        </div>
+        <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-signpost-2"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-start border-warning border-4 p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Chờ xử lý</div>
+          <div class="fs-3 fw-bold text-warning">{{ stats.pending_maintenance }}</div>
+        </div>
+        <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-hourglass-split"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-start border-success border-4 p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Hoàn thành tháng này</div>
+          <div class="fs-3 fw-bold text-success">{{ stats.completed_this_month }}</div>
+        </div>
+        <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle"></i></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card stat-card border-start border-danger border-4 p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Cảnh báo ngập lụt</div>
+          <div class="fs-3 fw-bold text-danger">{{ stats.active_flood_alerts }}</div>
+        </div>
+        <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-exclamation-triangle"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Phản ánh gần đây -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center bg-white border-0 pt-3 px-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-tools me-2 text-primary"></i>Phản ánh gần đây</h6>
+        <a href="{% url 'maintenance:request_list' %}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light"><tr>
+              <th class="px-3">Tiêu đề</th><th>Loại</th><th>Ưu tiên</th><th>Trạng thái</th><th>Ngày</th>
+            </tr></thead>
+            <tbody>
+              {% for req in recent_requests %}
+              <tr>
+                <td class="px-3"><a href="{% url 'maintenance:request_detail' req.pk %}" class="text-decoration-none">{{ req.title|truncatechars:40 }}</a></td>
+                <td><span class="badge bg-secondary bg-opacity-10 text-dark">{{ req.get_incident_type_display }}</span></td>
+                <td>
+                  {% if req.priority == 'urgent' %}<span class="badge bg-danger">Khẩn cấp</span>
+                  {% elif req.priority == 'high' %}<span class="badge bg-warning text-dark">Cao</span>
+                  {% elif req.priority == 'medium' %}<span class="badge bg-info text-dark">Trung bình</span>
+                  {% else %}<span class="badge bg-light text-dark">Thấp</span>{% endif %}
+                </td>
+                <td>
+                  {% if req.status == 'completed' %}<span class="badge bg-success">Hoàn thành</span>
+                  {% elif req.status == 'in_progress' %}<span class="badge bg-primary">Đang xử lý</span>
+                  {% elif req.status == 'pending' %}<span class="badge bg-warning text-dark">Chờ</span>
+                  {% else %}<span class="badge bg-secondary">{{ req.get_status_display }}</span>{% endif %}
+                </td>
+                <td class="text-muted small">{{ req.created_at|date:"d/m/Y" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center text-muted py-4">Chưa có phản ánh nào</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar info -->
+  <div class="col-lg-4">
+    <!-- Cảnh báo ngập -->
+    {% if flood_alerts %}
+    <div class="card mb-3 border-danger">
+      <div class="card-header bg-danger text-white d-flex align-items-center gap-2">
+        <i class="bi bi-exclamation-triangle-fill"></i><strong>Cảnh báo ngập lụt</strong>
+      </div>
+      <div class="list-group list-group-flush">
+        {% for alert in flood_alerts %}
+        <a href="{% url 'flood:alert_detail' alert.pk %}" class="list-group-item list-group-item-action">
+          <div class="fw-semibold small">{{ alert.area_name }}</div>
+          <div class="text-muted" style="font-size:.75rem">{{ alert.get_level_display }} — Mực nước {{ alert.water_level_cm }}cm</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Thông báo -->
+    <div class="card">
+      <div class="card-header bg-white border-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0"><i class="bi bi-bell me-2 text-primary"></i>Thông báo mới</h6>
+        <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-link p-0">Xem tất cả</a>
+      </div>
+      <div class="list-group list-group-flush">
+        {% for notif in notifications %}
+        <a href="{% url 'notifications:mark_read' notif.pk %}" class="list-group-item list-group-item-action py-2">
+          <div class="small fw-semibold">{{ notif.title }}</div>
+          <div class="text-muted" style="font-size:.72rem">{{ notif.message|truncatechars:50 }}</div>
+          <div class="text-muted" style="font-size:.68rem">{{ notif.created_at|timesince }} trước</div>
+        </a>
+        {% empty %}
+        <div class="list-group-item text-center text-muted py-3 small">Không có thông báo mới</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

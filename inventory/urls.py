@@ -1,10 +1,13 @@
-# inventory/urls.py
-
 from django.urls import path
 from . import views
 
+app_name = 'inventory'
+
 urlpatterns = [
-    path('materials/', views.material_list, name='material_list'),  # Danh sách vật tư
-    path('add-stock/', views.add_stock, name='add_stock'),  # Thêm vật tư vào kho
-    path('transactions/', views.stock_transaction_list, name='stock_transaction_list'),  # Danh sách giao dịch kho
+    path('', views.material_list, name='material_list'),
+    path('<int:pk>/', views.material_detail, name='material_detail'),
+    path('<int:pk>/stock-in/', views.stock_in, name='stock_in'),
+    path('<int:pk>/stock-out/', views.stock_out, name='stock_out'),
+    path('transactions/', views.transactions_list, name='transactions'),
+    path('report/', views.inventory_report, name='report'),
 ]
