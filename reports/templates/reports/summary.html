@@ -1,34 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Summary" }}</h4>
+  <h4 class="fw-bold"><i class="bi bi-graph-up me-2 text-primary"></i>Báo cáo tổng hợp</h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'reports:monthly' %}" class="btn btn-outline-primary btn-sm">Báo cáo tháng</a>
+    <a href="{% url 'reports:yearly' %}" class="btn btn-outline-secondary btn-sm">Báo cáo năm</a>
+    <a href="{% url 'reports:export_excel' %}" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel</a>
+    <a href="{% url 'reports:export_pdf' %}" class="btn btn-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Xuất PDF</a>
+  </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Luu</button> <a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">H?y</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>N?i dung</th><th>Tr?ng th�i</th><th>Ng�y t?o</th></tr></thead>
-<tbody>
-{% for item in page_obj %}
-<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>�</td><td>�</td></tr>
-{% empty %}<tr><td colspan="4" class="text-center py-4 text-muted">Chua c� d? li?u</td></tr>{% endfor %}
-</tbody>
-</table></div>
-{% if page_obj.has_other_pages %}
-<div class="p-3 d-flex justify-content-center"><nav><ul class="pagination pagination-sm mb-0">
-{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">�</a></li>{% endif %}
-<li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
-{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">�</a></li>{% endif %}
-</ul></nav></div>
-{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body"><p class="text-muted text-center py-3">N?i dung trang Summary</p></div></div>
-{% endif %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#3498db">{{ stats.total_incidents }}</div><div class="text-muted small">Tổng sự cố</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#e74c3c">{{ stats.monthly_incidents }}</div><div class="text-muted small">Tháng này</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#27ae60">{{ stats.completed_incidents }}</div><div class="text-muted small">Hoàn thành</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#8e44ad">{{ stats.total_roads }}</div><div class="text-muted small">Tuyến đường</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#f39c12">{{ stats.total_lights }}</div><div class="text-muted small">Đèn giao thông</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#16a085">{% if stats.avg_rating %}{{ stats.avg_rating|floatformat:1 }}/5{% else %}—{% endif %}</div><div class="text-muted small">Đánh giá TB</div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card"><div class="card-header fw-bold">Sự cố theo loại</div><div class="card-body">
+      {% for item in stats.incidents_by_type %}
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span style="font-size:.88rem">{{ item.incident_type }}</span>
+        <span class="badge bg-primary">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card"><div class="card-header fw-bold">Sự cố theo trạng thái</div><div class="card-body">
+      {% for item in stats.incidents_by_status %}
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span style="font-size:.88rem">{{ item.status }}</span>
+        <span class="badge bg-secondary">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+    </div></div>
+  </div>
+</div>
 {% endblock %}

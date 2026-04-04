@@ -1,33 +1,110 @@
-# Urban Infrastructure Management System
+# Hệ thống Quản lý Hạ tầng Đô thị
 
-## Mô tả dự án
-Dự án này là hệ thống quản lý hạ tầng đô thị, bao gồm các chức năng như:
-- Quản lý tài khoản người dùng
-- Quản lý cơ sở hạ tầng
-- Quản lý sự cố và bảo trì
-- Quản lý vật tư
-- Thống kê và báo cáo
-- Cảnh báo thiên tai và ngập lụt
-- Hỗ trợ chatbot tự động
+## Giới thiệu
 
-## Yêu cầu trước khi bắt đầu
-Trước khi bạn bắt đầu, hãy chắc chắn rằng bạn đã cài đặt các công cụ sau:
+Dự án Django đầy đủ tính năng cho quản lý hạ tầng đô thị bao gồm:
 
-- **Python 3.8+**: [Tải Python tại đây](https://www.python.org/downloads/)
-- **MySQL**: Đảm bảo bạn có MySQL phiên bản 5.7 trở lên được cài đặt trên máy tính của mình. [Tải MySQL tại đây](https://dev.mysql.com/downloads/installer/)
-- **Redis**: Dùng Redis cho việc đồng bộ các tác vụ định kỳ (ví dụ: Celery). [Tải Redis tại đây](https://redis.io/download)
+- **Quản lý tài khoản**: Đăng ký, đăng nhập, OTP 2FA, phân quyền vai trò
+- **Hạ tầng đường bộ**: Tuyến đường, ổ gà, đèn giao thông, lịch sử sửa chữa  
+- **Bảo trì & Phản ánh**: Gửi phản ánh, phân công, theo dõi tiến độ
+- **Ngập lụt & Thiên tai**: Cảnh báo thời gian thực qua WebSocket
+- **Chatbot hỗ trợ**: Trả lời tự động dựa trên FAQ
+- **Đăng kiểm phương tiện**: Đặt lịch, kiểm tra, cấp chứng nhận
+- **Giấy phép thi công**: Nộp hồ sơ online, phê duyệt điện tử
+- **Nhân sự**: Quản lý nhân viên, phân công, nghỉ phép, đào tạo
+- **Hợp đồng & Đấu thầu**: Quản lý toàn bộ vòng đời hợp đồng
+- **Vật tư**: Kho vật tư, nhập/xuất, dự báo nhu cầu
+- **Thống kê & Báo cáo**: Xuất Excel/PDF, biểu đồ phân tích
+- **Bản đồ tương tác**: Leaflet.js với các lớp dữ liệu hạ tầng
+- **Backup**: Sao lưu/khôi phục tự động
+- **Tích hợp API**: OAuth, SMS gateway, webhook
 
-## Các bước cài đặt và chạy dự án
+## Cài đặt
 
-### 1. **Clone dự án từ GitHub**
-Đầu tiên, bạn cần clone dự án về máy tính của mình:
+### 1. Yêu cầu
+- Python 3.10+
+- pip
+- (Tuỳ chọn) Redis cho Celery + WebSocket
 
+### 2. Thiết lập môi trường ảo
 ```bash
-git clone https://github.com/Dung267/QLDA_team04.git
-
-### 2. **Tạo môi trường ảo**
-
 python -m venv .venv
+# Windows:
 .venv\Scripts\activate
-pip install -r requirements.txt
+# Linux/Mac:
+source .venv/bin/activate
+```
 
+### 3. Cài đặt thư viện
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Cấu hình môi trường
+```bash
+cp .env.example .env
+# Chỉnh sửa .env theo môi trường của bạn
+```
+
+### 5. Migrate database
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 6. Tạo dữ liệu mẫu
+```bash
+python manage.py loaddata fixtures/initial_data.json
+# Hoặc tạo superuser:
+python manage.py createsuperuser
+```
+
+### 7. Chạy server
+```bash
+python manage.py runserver
+```
+
+Truy cập: http://127.0.0.1:8000
+
+## Cấu trúc ứng dụng
+
+| App | Chức năng |
+|-----|-----------|
+| `accounts` | Người dùng, xác thực, OTP, session |
+| `infrastructure` | Đường, đèn, hạ tầng |
+| `maintenance` | Phản ánh, bảo trì, lịch |
+| `notifications` | Thông báo, WebSocket |
+| `inventory` | Kho vật tư |
+| `flood` | Cảnh báo ngập lụt |
+| `chatbot` | Chatbot hỗ trợ |
+| `hr` | Nhân sự |
+| `maps` | Bản đồ Leaflet |
+| `contracts` | Hợp đồng, đấu thầu |
+| `weather` | Thời tiết |
+| `surveys` | Khảo sát |
+| `documents` | Tài liệu |
+| `backup` | Sao lưu |
+| `permits` | Giấy phép thi công |
+| `vehicle_inspection` | Đăng kiểm xe |
+| `feedback` | Phản hồi hệ thống |
+| `integration` | Tích hợp API |
+| `reports` | Báo cáo, xuất file |
+
+## Vai trò người dùng
+- `admin` – Quản trị viên hệ thống
+- `manager` – Quản lý
+- `staff` – Cán bộ kỹ thuật
+- `inspector` – Kiểm định viên
+- `citizen` – Người dân
+
+## API Endpoints
+- `/api/accounts/` – Người dùng
+- `/api/infrastructure/` – Hạ tầng
+- `/api/maintenance/` – Bảo trì
+- `/api/flood/alerts/` – Cảnh báo ngập
+- `/api/weather/current/` – Thời tiết
+- `/api/chatbot/chat/` – Chatbot
+
+## WebSocket
+- `ws://localhost:8000/ws/notifications/` – Thông báo realtime
+- `ws://localhost:8000/ws/flood/` – Cảnh báo ngập realtime

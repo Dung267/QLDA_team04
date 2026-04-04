@@ -1,31 +1,25 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.utils import timezone
 from .models import WeatherData, WeatherForecast
+from django.utils import timezone
 
-
+@login_required
 def current_weather(request):
-    data = WeatherData.objects.order_by('-recorded_at').first()
+    location = request.GET.get('location','Da Nang')
+    latest = WeatherData.objects.filter(location__icontains=location).first()
     forecasts = WeatherForecast.objects.filter(
+        location__icontains=location,
         forecast_date__gte=timezone.now().date()
-    ).order_by('forecast_date')[:7]
-    return render(request, 'weather/current.html', {
-        'current': data, 'forecasts': forecasts, 'page_title': 'Thời tiết'
-    })
+    )[:7]
+    return render(request,'weather/current_weather.html',{
+        'latest':latest,'forecasts':forecasts,'location':location,'page_title':'Thời tiết'})
 
-
+@login_required
 def weather_api(request):
-    location = request.GET.get('location', '')
-    data = WeatherData.objects.filter(location__icontains=location).order_by('-recorded_at').first()
-    if data:
-        return JsonResponse({
-            'location': data.location,
-            'temperature': data.temperature,
-            'humidity': data.humidity,
-            'wind_speed': data.wind_speed,
-            'rainfall_mm': data.rainfall_mm,
-            'description': data.description,
-            'recorded_at': data.recorded_at.isoformat(),
-        })
-    return JsonResponse({'error': 'No data found'}, status=404)
+    location = request.GET.get('location','')
+    qs = WeatherData.objects.all()
+    if location:
+        qs = qs.filter(location__icontains=location)
+    data = list(qs.values('location','temperature','humidity','wind_speed','description','recorded_at')[:10])
+    return JsonResponse({'data':data})

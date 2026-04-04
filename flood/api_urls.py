@@ -1,6 +1,5 @@
 from django.urls import path
-from .views import flood_map_api
-
+from . import views
 urlpatterns = [
-    path('map/', flood_map_api, name='flood_map_api'),
+    path('alerts/', views.active_alerts_api, name='api_flood_alerts'),
 ]

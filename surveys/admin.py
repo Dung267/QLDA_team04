@@ -1,19 +1,15 @@
 from django.contrib import admin
 from .models import Survey, SurveyQuestion, SurveyResponse
 
-
-class SurveyQuestionInline(admin.TabularInline):
+class QuestionInline(admin.TabularInline):
     model = SurveyQuestion
-    extra = 1
-
+    extra = 2
 
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
-    list_display = ['title', 'is_active', 'start_date', 'end_date']
-    inlines = [SurveyQuestionInline]
-
+    list_display = ['title','is_active','deadline','created_at']
+    inlines = [QuestionInline]
 
 @admin.register(SurveyResponse)
 class SurveyResponseAdmin(admin.ModelAdmin):
-    list_display = ['survey', 'respondent', 'overall_rating', 'submitted_at']
-    readonly_fields = ['submitted_at', 'answers']
+    list_display = ['survey','respondent','satisfaction_score','created_at']

@@ -1,9 +1,9 @@
-from celery import shared_task
+# Celery tasks for weather data fetching
+# Uncomment and configure when Celery is set up
+# from celery import shared_task
+# import requests
 
-@shared_task
-def sync_weather_for_all_areas():
-    # duyệt theo Area
-    # gọi OpenWeather
-    # validate dữ liệu
-    # lưu WeatherSnapshot
-    pass
+# @shared_task
+# def fetch_weather_data():
+#     """Fetch weather data from external API"""
+#     pass
