@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
@@ -37,7 +38,7 @@ class FAQ(models.Model):
     keywords = models.TextField('Từ khóa (cách nhau dấu phẩy)', blank=True)
     view_count = models.IntegerField('Số lần xem', default=0)
     is_active = models.BooleanField('Hiển thị', default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField('Ngày tạo', auto_now_add=True)
 
     class Meta:
         verbose_name = 'FAQ'

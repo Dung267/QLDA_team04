@@ -5,7 +5,9 @@
     "fields": {
       "name": "Cầu",
       "code": "BRIDGE",
-      "description": "Cầu đường bộ"
+      "description": "Cầu đường bộ",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -14,7 +16,9 @@
     "fields": {
       "name": "Hầm chui",
       "code": "TUNNEL",
-      "description": "Hầm đường bộ"
+      "description": "Hầm đường bộ",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -23,7 +27,9 @@
     "fields": {
       "name": "Cống thoát nước",
       "code": "DRAIN",
-      "description": "Hệ thống thoát nước"
+      "description": "Hệ thống thoát nước",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -32,7 +38,9 @@
     "fields": {
       "name": "Biển báo",
       "code": "SIGN",
-      "description": "Biển báo giao thông"
+      "description": "Biển báo giao thông",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -41,7 +49,9 @@
     "fields": {
       "name": "Vỉa hè",
       "code": "SIDEWALK",
-      "description": "Vỉa hè, hành lang"
+      "description": "Vỉa hè, hành lang",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -51,7 +61,9 @@
       "name": "Khu vực Hải Châu",
       "district": "Hải Châu",
       "description": "Quận trung tâm",
-      "manager": null
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -61,7 +73,9 @@
       "name": "Khu vực Thanh Khê",
       "district": "Thanh Khê",
       "description": "Quận phía Tây",
-      "manager": null
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -71,7 +85,9 @@
       "name": "Khu vực Sơn Trà",
       "district": "Sơn Trà",
       "description": "Quận bán đảo",
-      "manager": null
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -81,7 +97,9 @@
       "name": "Khu vực Ngũ Hành Sơn",
       "district": "Ngũ Hành Sơn",
       "description": "Quận phía Nam",
-      "manager": null
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -91,7 +109,9 @@
       "name": "Khu vực Liên Chiểu",
       "district": "Liên Chiểu",
       "description": "Quận phía Bắc",
-      "manager": null
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -99,7 +119,9 @@
     "pk": 1,
     "fields": {
       "name": "Thiết kế kỹ thuật",
-      "code": "DESIGN"
+      "code": "DESIGN",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -107,7 +129,9 @@
     "pk": 2,
     "fields": {
       "name": "Hợp đồng",
-      "code": "CONTRACT"
+      "code": "CONTRACT",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -115,7 +139,9 @@
     "pk": 3,
     "fields": {
       "name": "Báo cáo",
-      "code": "REPORT"
+      "code": "REPORT",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -123,7 +149,9 @@
     "pk": 4,
     "fields": {
       "name": "Quy hoạch",
-      "code": "PLAN"
+      "code": "PLAN",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -131,7 +159,9 @@
     "pk": 5,
     "fields": {
       "name": "Pháp lý",
-      "code": "LEGAL"
+      "code": "LEGAL",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -141,7 +171,9 @@
       "name": "Trung tâm Đăng kiểm 43-01D",
       "address": "123 Điện Biên Phủ, Hải Châu, Đà Nẵng",
       "phone": "0236-3822001",
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -151,7 +183,9 @@
       "name": "Trung tâm Đăng kiểm 43-02D",
       "address": "456 Nguyễn Văn Linh, Thanh Khê, Đà Nẵng",
       "phone": "0236-3812002",
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -163,7 +197,9 @@
       "category": "Bảo trì",
       "keywords": "phản ánh,sự cố,báo cáo,gửi phản ánh",
       "view_count": 150,
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -175,7 +211,9 @@
       "category": "Đăng kiểm",
       "keywords": "đăng kiểm,xe,đặt lịch,phương tiện",
       "view_count": 120,
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -187,7 +225,9 @@
       "category": "Giấy phép",
       "keywords": "giấy phép,thi công,xin phép,hồ sơ",
       "view_count": 95,
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -199,7 +239,9 @@
       "category": "Ngập lụt",
       "keywords": "ngập,lụt,bão,cảnh báo,lũ",
       "view_count": 200,
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -211,7 +253,9 @@
       "category": "Bảo trì",
       "keywords": "theo dõi,tiến độ,trạng thái,xử lý",
       "view_count": 80,
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -223,7 +267,9 @@
       "endpoint": "https://api.sms.vnpt.vn/",
       "status": "inactive",
       "last_sync": null,
-      "error_message": ""
+      "error_message": "",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -235,7 +281,9 @@
       "endpoint": "https://api.sendgrid.com/v3/",
       "status": "inactive",
       "last_sync": null,
-      "error_message": ""
+      "error_message": "",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -247,7 +295,9 @@
       "endpoint": "https://api.openweathermap.org/data/2.5/",
       "status": "inactive",
       "last_sync": null,
-      "error_message": ""
+      "error_message": "",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -259,7 +309,9 @@
       "endpoint": "https://api.dangkiem.gov.vn/",
       "status": "inactive",
       "last_sync": null,
-      "error_message": ""
+      "error_message": "",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -269,7 +321,9 @@
       "name": "Báo cáo tháng - Sự cố hạ tầng",
       "report_type": "monthly",
       "description": "Thống kê sự cố theo tháng",
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -279,7 +333,9 @@
       "name": "Báo cáo quý - Bảo trì tổng hợp",
       "report_type": "quarterly",
       "description": "Thống kê bảo trì theo quý",
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   },
   {
@@ -289,7 +345,9 @@
       "name": "Báo cáo năm - Hiệu suất xử lý",
       "report_type": "yearly",
       "description": "Đánh giá hiệu suất năm",
-      "is_active": true
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
     }
   }
 ]

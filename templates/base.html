@@ -34,6 +34,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5}
     <small>Quản lý Hạ tầng Đô thị</small>
   </div>
   <nav class="py-2">
+    <!-- Sidebar content here -->
     <a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-speedometer2"></i>Tổng quan</a>
     <div class="nav-section">Hạ tầng</div>
     <a href="{% url 'infrastructure:road_list' %}" class="nav-link"><i class="bi bi-signpost-2"></i>Tuyến đường</a>
@@ -92,14 +93,18 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5}
   </div>
   <div class="content-area">
     {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
-    {% block content %}{% endblock %}
+    {% block content_authenticated %}
+      <!-- Nội dung cho người dùng đã đăng nhập -->
+    {% endblock %}
   </div>
   <footer class="text-center py-3 text-muted" style="font-size:.78rem;border-top:1px solid #e0e0e0;background:#fff">{{ SYSTEM_NAME }} v{{ SYSTEM_VERSION }} &copy; {% now "Y" %}</footer>
 </div>
 {% else %}
 <div class="container mt-4">
-{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
-{% block content %}{% endblock %}
+  {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+  {% block auth_content %}
+    <!-- Nội dung cho người dùng chưa đăng nhập -->
+  {% endblock %}
 </div>
 {% endif %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
