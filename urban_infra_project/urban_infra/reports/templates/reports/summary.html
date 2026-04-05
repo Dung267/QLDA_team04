@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold"><i class="bi bi-graph-up me-2 text-primary"></i>Báo cáo tổng hợp</h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'reports:monthly' %}" class="btn btn-outline-primary btn-sm">Báo cáo tháng</a>
+    <a href="{% url 'reports:yearly' %}" class="btn btn-outline-secondary btn-sm">Báo cáo năm</a>
+    <a href="{% url 'reports:export_excel' %}" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel</a>
+    <a href="{% url 'reports:export_pdf' %}" class="btn btn-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Xuất PDF</a>
+  </div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#3498db">{{ stats.total_incidents }}</div><div class="text-muted small">Tổng sự cố</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#e74c3c">{{ stats.monthly_incidents }}</div><div class="text-muted small">Tháng này</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#27ae60">{{ stats.completed_incidents }}</div><div class="text-muted small">Hoàn thành</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#8e44ad">{{ stats.total_roads }}</div><div class="text-muted small">Tuyến đường</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#f39c12">{{ stats.total_lights }}</div><div class="text-muted small">Đèn giao thông</div></div></div>
+  <div class="col-sm-4 col-lg-2"><div class="card text-center p-3"><div style="font-size:1.8rem;font-weight:700;color:#16a085">{% if stats.avg_rating %}{{ stats.avg_rating|floatformat:1 }}/5{% else %}—{% endif %}</div><div class="text-muted small">Đánh giá TB</div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card"><div class="card-header fw-bold">Sự cố theo loại</div><div class="card-body">
+      {% for item in stats.incidents_by_type %}
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span style="font-size:.88rem">{{ item.incident_type }}</span>
+        <span class="badge bg-primary">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card"><div class="card-header fw-bold">Sự cố theo trạng thái</div><div class="card-body">
+      {% for item in stats.incidents_by_status %}
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span style="font-size:.88rem">{{ item.status }}</span>
+        <span class="badge bg-secondary">{{ item.count }}</span>
+      </div>
+      {% endfor %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+
+<style>
+#uc-wrap svg { width:100%; }
+.uc-actor { cursor:default; }
+.uc-case { cursor:pointer; }
+.uc-case:hover rect { opacity:.85; }
+</style>
+<div id="uc-wrap"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad:false, theme:'base',
+  fontFamily:'"Anthropic Sans",sans-serif',
+  themeVariables:{
+    darkMode:dark, fontSize:'12px',
+    fontFamily:'"Anthropic Sans",sans-serif',
+    lineColor: dark?'#9c9a92':'#73726c',
+    textColor: dark?'#c2c0b6':'#3d3d3a',
+    primaryColor: dark?'#252522':'#eeeae4',
+    primaryBorderColor: dark?'#555':'#aaa',
+    secondaryColor: dark?'#1e2a1a':'#e0f0e8',
+    tertiaryColor: dark?'#1a1e2a':'#e0e8f5',
+  },
+});
+const src = `
+flowchart LR
+  ND("Người dân"):::actor
+  CB("Cán bộ kỹ thuật"):::actor
+  QL("Quản lý"):::actor
+  AD("Admin"):::actor
+  KD("Kiểm định viên"):::actor
+
+  subgraph AUTH["Tài khoản & Xác thực"]
+    U1["Đăng ký tài khoản"]
+    U2["Đăng nhập / OTP 2FA"]
+    U3["Đổi mật khẩu"]
+    U4["Quên mật khẩu"]
+    U5["Cập nhật hồ sơ"]
+  end
+
+  subgraph PHANANH["Bảo trì & Phản ánh"]
+    M1["Gửi phản ánh sự cố"]
+    M2["Đính kèm ảnh / video"]
+    M3["Theo dõi trạng thái"]
+    M4["Hủy phản ánh"]
+    M5["Đánh giá kết quả"]
+    M6["Tiếp nhận phản ánh"]
+    M7["Phân công xử lý"]
+    M8["Cập nhật tiến độ"]
+    M9["Upload ảnh trước/sau"]
+    M10["Lập lịch bảo trì"]
+  end
+
+  subgraph HATANG["Hạ tầng đường bộ"]
+    I1["Thêm/sửa tuyến đường"]
+    I2["Ghi nhận ổ gà"]
+    I3["Theo dõi đèn giao thông"]
+    I4["Xem bản đồ hạ tầng"]
+    I5["Thống kê hạ tầng"]
+  end
+
+  subgraph DICHVU["Dịch vụ công"]
+    P1["Tạo hồ sơ xin phép thi công"]
+    P2["Nộp hồ sơ & đính kèm"]
+    P3["Theo dõi trạng thái hồ sơ"]
+    P4["Phê duyệt / từ chối"]
+    V1["Đăng ký phương tiện"]
+    V2["Đặt lịch đăng kiểm"]
+    V3["Kiểm tra kỹ thuật xe"]
+    V4["Cấp chứng nhận"]
+  end
+
+  subgraph CANHBAO["Cảnh báo & Thiên tai"]
+    F1["Xem cảnh báo ngập lụt"]
+    F2["Tạo cảnh báo ngập lụt"]
+    F3["Cập nhật tình trạng"]
+    F4["Xem thời tiết"]
+  end
+
+  subgraph QUANLY["Quản lý nội bộ"]
+    H1["Quản lý nhân viên"]
+    H2["Phân công công việc"]
+    H3["Duyệt đơn nghỉ phép"]
+    C1["Tạo / duyệt hợp đồng"]
+    C2["Quản lý đấu thầu"]
+    IN1["Kho vật tư nhập/xuất"]
+    IN2["Theo dõi tồn kho"]
+  end
+
+  subgraph BAOCAO["Báo cáo & Thống kê"]
+    R1["Xem báo cáo tháng/năm"]
+    R2["Xuất Excel / PDF"]
+    R3["Thống kê sự cố"]
+    R4["Xem khảo sát hài lòng"]
+    R5["Gửi phản hồi hệ thống"]
+  end
+
+  subgraph HTRO["Hỗ trợ"]
+    CH1["Chat với chatbot"]
+    CH2["Xem thông báo"]
+    CH3["Quản lý FAQ"]
+  end
+
+  subgraph SYSTEM["Hệ thống (Admin)"]
+    S1["Quản lý người dùng"]
+    S2["Phân quyền vai trò"]
+    S3["Backup / Restore"]
+    S4["Cấu hình hệ thống"]
+    S5["Tích hợp API bên thứ 3"]
+    S6["Xem log hệ thống"]
+  end
+
+  ND --> U1 & U2 & U3 & U4 & U5
+  ND --> M1 & M2 & M3 & M4 & M5
+  ND --> P1 & P2 & P3
+  ND --> V1 & V2
+  ND --> F1 & F4
+  ND --> CH1 & CH2
+  ND --> R5
+
+  CB --> U2 & U3 & U5
+  CB --> M6 & M7 & M8 & M9 & M10
+  CB --> I2 & I3 & I4
+  CB --> F3
+  CB --> IN1 & IN2
+  CB --> CH2
+
+  QL --> M6 & M7 & M8 & M10
+  QL --> I1 & I2 & I3 & I4 & I5
+  QL --> P4
+  QL --> V3 & V4
+  QL --> H1 & H2 & H3
+  QL --> C1 & C2
+  QL --> R1 & R2 & R3 & R4
+  QL --> F2 & F3
+  QL --> CH3
+
+  KD --> V3 & V4
+  KD --> CH2
+
+  AD --> S1 & S2 & S3 & S4 & S5 & S6
+  AD --> R1 & R2 & R3
+  AD --> CH3
+
+  classDef actor fill:#E1F5EE,stroke:#0F6E56,color:#085041
+  classDef default fill:#E6F1FB,stroke:#185FA5,color:#0C447C,rx:8
+`;
+const {svg} = await mermaid.render('uc-svg', src);
+document.getElementById('uc-wrap').innerHTML = svg;
+</script>

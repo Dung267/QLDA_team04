@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h4 class="fw-bold">{{ req.title }}</h4>
+    <span class="badge bg-{% if req.priority == 'urgent' %}danger{% elif req.priority == 'high' %}warning text-dark{% else %}secondary{% endif %} me-2">{{ req.get_priority_display }}</span>
+    <span class="badge bg-{% if req.status == 'completed' %}success{% elif req.status == 'in_progress' %}info{% elif req.status == 'pending' %}warning text-dark{% elif req.status == 'rejected' %}danger{% else %}secondary{% endif %}">{{ req.get_status_display }}</span>
+  </div>
+  <a href="{% url 'maintenance:request_list' %}" class="btn btn-sm btn-outline-secondary">← Quay lại</a>
+</div>
+<div class="row g-3">
+  <div class="col-md-8">
+    <div class="card mb-3">
+      <div class="card-header fw-bold">Thông tin phản ánh</div>
+      <div class="card-body">
+        <div class="row g-2 mb-3" style="font-size:.9rem">
+          <div class="col-sm-4 text-muted">Loại sự cố:</div><div class="col-sm-8 fw-medium">{{ req.get_incident_type_display }}</div>
+          <div class="col-sm-4 text-muted">Địa chỉ:</div><div class="col-sm-8">{{ req.address|default:"—" }}</div>
+          <div class="col-sm-4 text-muted">Người báo:</div><div class="col-sm-8">{% if req.is_anonymous %}Ẩn danh{% else %}{{ req.reported_by.get_full_name|default:"—" }}{% endif %}</div>
+          <div class="col-sm-4 text-muted">Người xử lý:</div><div class="col-sm-8">{{ req.assigned_to.get_full_name|default:"Chưa phân công" }}</div>
+          <div class="col-sm-4 text-muted">Ngày tạo:</div><div class="col-sm-8">{{ req.created_at|date:"d/m/Y H:i" }}</div>
+          {% if req.completed_at %}<div class="col-sm-4 text-muted">Hoàn thành:</div><div class="col-sm-8">{{ req.completed_at|date:"d/m/Y H:i" }}</div>{% endif %}
+          {% if req.actual_cost %}<div class="col-sm-4 text-muted">Chi phí:</div><div class="col-sm-8">{{ req.actual_cost|floatformat:0 }} VNĐ</div>{% endif %}
+        </div>
+        <hr>
+        <h6 class="fw-bold">Mô tả</h6>
+        <p>{{ req.description }}</p>
+        {% if req.processing_note %}<h6 class="fw-bold">Ghi chú xử lý</h6><p>{{ req.processing_note }}</p>{% endif %}
+      </div>
+    </div>
+
+    <!-- Photos -->
+    {% if photos %}
+    <div class="card mb-3">
+      <div class="card-header fw-bold">Hình ảnh đính kèm</div>
+      <div class="card-body">
+        <div class="row g-2">
+          {% for photo in photos %}
+          <div class="col-4">
+            <a href="{{ photo.image.url }}" target="_blank"><img src="{{ photo.image.url }}" class="img-fluid rounded" style="height:120px;object-fit:cover;width:100%"></a>
+            <div class="text-muted text-center" style="font-size:.75rem">{{ photo.get_phase_display }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Comments -->
+    <div class="card mb-3">
+      <div class="card-header fw-bold">Bình luận</div>
+      <div class="card-body">
+        {% for c in comments %}
+        <div class="d-flex gap-2 mb-3">
+          <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px"><i class="bi bi-person" style="font-size:.9rem"></i></div>
+          <div>
+            <div class="fw-medium" style="font-size:.85rem">{{ c.author.get_full_name|default:"Ẩn danh" }} <span class="text-muted fw-normal">– {{ c.created_at|date:"d/m/Y H:i" }}</span></div>
+            <p class="mb-0" style="font-size:.9rem">{{ c.content }}</p>
+          </div>
+        </div>
+        {% empty %}<p class="text-muted small">Chưa có bình luận nào</p>{% endfor %}
+        <form method="post" action="{% url 'maintenance:add_comment' req.pk %}">{% csrf_token %}
+          {{ comment_form.content }}
+          <button type="submit" class="btn btn-primary btn-sm mt-2">Gửi bình luận</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <!-- Actions -->
+    <div class="card mb-3">
+      <div class="card-header fw-bold">Hành động</div>
+      <div class="card-body d-grid gap-2">
+        {% if request.user == req.reported_by and req.status in 'pending,received' %}
+        <a href="{% url 'maintenance:request_cancel' req.pk %}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Hủy phản ánh?')">Hủy phản ánh</a>
+        {% endif %}
+        {% if request.user.is_staff_member %}
+        {% if req.status == 'pending' %}
+        <form method="post" action="{% url 'maintenance:request_receive' req.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm w-100">Tiếp nhận</button></form>
+        {% endif %}
+        {% if req.status in 'received,assigned' %}
+        <a href="{% url 'maintenance:request_assign' req.pk %}" class="btn btn-warning btn-sm">Phân công</a>
+        {% endif %}
+        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#updateForm">Cập nhật tiến độ</button>
+        <div id="updateForm" class="collapse">
+          <form method="post" action="{% url 'maintenance:request_progress' req.pk %}" enctype="multipart/form-data">{% csrf_token %}
+            <select name="status" class="form-select form-select-sm mb-2">{% for v,l in req.STATUS_CHOICES %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
+            <textarea name="note" class="form-control form-control-sm mb-2" rows="2" placeholder="Ghi chú xử lý..."></textarea>
+            <input type="number" name="actual_cost" class="form-control form-control-sm mb-2" placeholder="Chi phí thực tế (VNĐ)">
+            <input type="file" name="after_photos" class="form-control form-control-sm mb-2" accept="image/*" multiple>
+            <button type="submit" class="btn btn-primary btn-sm w-100">Lưu</button>
+          </form>
+        </div>
+        {% endif %}
+        {% if req.status == 'completed' and request.user == req.reported_by and not req.citizen_rating %}
+        <a href="#ratingForm" class="btn btn-outline-warning btn-sm" data-bs-toggle="collapse">Đánh giá kết quả</a>
+        <div id="ratingForm" class="collapse">
+          <form method="post" action="{% url 'maintenance:request_rate' req.pk %}">{% csrf_token %}
+            <div class="mb-2"><label class="form-label small">Đánh giá (1-5):</label>
+            <select name="rating" class="form-select form-select-sm">{% for i in "12345" %}<option value="{{ i }}">{{ i }} ★</option>{% endfor %}</select></div>
+            <textarea name="feedback" class="form-control form-control-sm mb-2" rows="2" placeholder="Nhận xét..."></textarea>
+            <button type="submit" class="btn btn-warning btn-sm w-100">Gửi đánh giá</button>
+          </form>
+        </div>
+        {% endif %}
+        {% if req.citizen_rating %}
+        <div class="alert alert-success p-2 mb-0 small"><b>Đánh giá:</b> {{ req.citizen_rating }}/5 ★<br>{{ req.citizen_feedback }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

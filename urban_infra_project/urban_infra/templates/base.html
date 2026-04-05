@@ -7,61 +7,27 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
 <style>
-:root { --sidebar-width: 260px; --sidebar-bg: #1a2332; --sidebar-hover: #2c3e55; }
-body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
-
-.sidebar {
-  width: var(--sidebar-width); min-height: 100vh;
-  background: var(--sidebar-bg); position: fixed;
-  top: 0; left: 0; z-index: 1000; overflow-y: auto;
-}
-.sidebar .brand { padding: 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
-.sidebar .brand h6 { color: #fff; font-weight: 700; margin: 0; font-size: .85rem; }
-.sidebar .brand small { color: rgba(255,255,255,.5); font-size: .7rem; }
-.sidebar .nav-link {
-  color: rgba(255,255,255,.75); padding: 9px 16px; border-radius: 6px;
-  margin: 1px 8px; font-size: .84rem; display: flex; align-items: center;
-  gap: 10px; text-decoration: none;
-}
-.sidebar .nav-link:hover, .sidebar .nav-link.active {
-  background: var(--sidebar-hover); color: #fff;
-}
-.nav-section {
-  color: rgba(255,255,255,.3); font-size: .68rem;
-  text-transform: uppercase; letter-spacing: 1px; padding: 10px 16px 2px;
-}
-/* Authenticated wrapper */
-.main-content {
-  margin-left: var(--sidebar-width); min-height: 100vh;
-  display: flex; flex-direction: column;
-}
-.topbar {
-  background: #fff; padding: 10px 24px; border-bottom: 1px solid #e0e0e0;
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 100;
-}
-.content-area { padding: 24px; flex: 1; }
-/* Guest wrapper */
-.guest-area { padding: 24px; }
-/* Shared */
-.card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-.card-header {
-  background: #fff; border-bottom: 1px solid #f0f0f0;
-  border-radius: 12px 12px 0 0 !important; padding: 16px 20px;
-}
-.notification-badge { position: absolute; top: -4px; right: -4px; font-size: .65rem; }
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.show { transform: translateX(0); }
-  .main-content { margin-left: 0; }
-}
+:root{--sidebar-width:260px;--sidebar-bg:#1a2332;--sidebar-hover:#2c3e55;--accent:#3498db}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5}
+.sidebar{width:var(--sidebar-width);min-height:100vh;background:var(--sidebar-bg);position:fixed;top:0;left:0;z-index:1000;overflow-y:auto}
+.sidebar .brand{padding:16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar .brand h6{color:#fff;font-weight:700;margin:0;font-size:.85rem}
+.sidebar .brand small{color:rgba(255,255,255,.5);font-size:.7rem}
+.sidebar .nav-link{color:rgba(255,255,255,.75);padding:9px 16px;border-radius:6px;margin:1px 8px;font-size:.84rem;display:flex;align-items:center;gap:10px}
+.sidebar .nav-link:hover,.sidebar .nav-link.active{background:var(--sidebar-hover);color:#fff}
+.nav-section{color:rgba(255,255,255,.3);font-size:.68rem;text-transform:uppercase;letter-spacing:1px;padding:10px 16px 2px}
+.main-content{margin-left:var(--sidebar-width);min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:#fff;padding:10px 24px;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.content-area{padding:24px;flex:1}
+.card{border:none;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card-header{background:#fff;border-bottom:1px solid #f0f0f0;border-radius:12px 12px 0 0!important;padding:16px 20px}
+.notification-badge{position:absolute;top:-4px;right:-4px;font-size:.65rem}
+@media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.show{transform:translateX(0)}.main-content{margin-left:0}}
 </style>
 {% block extra_css %}{% endblock %}
 </head>
 <body>
-
 {% if user.is_authenticated %}
-
 <div class="sidebar" id="sidebar">
   <div class="brand">
     <h6><i class="bi bi-building me-2 text-info"></i>{{ SYSTEM_SHORT_NAME }}</h6>
@@ -69,81 +35,52 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
   </div>
   <nav class="py-2">
     <a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-speedometer2"></i>Tổng quan</a>
-
     <div class="nav-section">Hạ tầng</div>
     <a href="{% url 'infrastructure:road_list' %}" class="nav-link"><i class="bi bi-signpost-2"></i>Tuyến đường</a>
     <a href="{% url 'infrastructure:traffic_light_list' %}" class="nav-link"><i class="bi bi-traffic-light"></i>Đèn giao thông</a>
-    <a href="{% url 'infrastructure:infra_list' %}" class="nav-link"><i class="bi bi-buildings"></i>Hạ tầng khác</a>
-
+    <a href="{% url 'infrastructure:infra_list' %}" class="nav-link"><i class="bi bi-buildings"></i>Hạ tầng</a>
     <div class="nav-section">Bảo trì</div>
     <a href="{% url 'maintenance:request_create' %}" class="nav-link"><i class="bi bi-plus-circle text-warning"></i>Gửi phản ánh</a>
     <a href="{% url 'maintenance:request_list' %}" class="nav-link"><i class="bi bi-list-check"></i>Danh sách phản ánh</a>
     <a href="{% url 'maintenance:schedule_list' %}" class="nav-link"><i class="bi bi-calendar3"></i>Lịch bảo trì</a>
-
     <div class="nav-section">Dịch vụ công</div>
     <a href="{% url 'permits:list' %}" class="nav-link"><i class="bi bi-file-earmark-check"></i>Giấy phép thi công</a>
     <a href="{% url 'vehicle_inspection:inspection_list' %}" class="nav-link"><i class="bi bi-car-front"></i>Đăng kiểm xe</a>
-
     <div class="nav-section">Cảnh báo</div>
     <a href="{% url 'flood:alert_list' %}" class="nav-link"><i class="bi bi-water text-danger"></i>Ngập lụt</a>
     <a href="{% url 'weather:current' %}" class="nav-link"><i class="bi bi-cloud-sun"></i>Thời tiết</a>
-
     <div class="nav-section">Quản lý</div>
     <a href="{% url 'maps:map' %}" class="nav-link"><i class="bi bi-map"></i>Bản đồ</a>
     <a href="{% url 'inventory:material_list' %}" class="nav-link"><i class="bi bi-boxes"></i>Kho vật tư</a>
     <a href="{% url 'contracts:contract_list' %}" class="nav-link"><i class="bi bi-file-text"></i>Hợp đồng</a>
     <a href="{% url 'documents:list' %}" class="nav-link"><i class="bi bi-folder"></i>Tài liệu</a>
-    {% if user.is_staff_member %}
-    <a href="{% url 'hr:employee_list' %}" class="nav-link"><i class="bi bi-people"></i>Nhân sự</a>
-    {% endif %}
-
+    {% if user.is_staff_member %}<a href="{% url 'hr:employee_list' %}" class="nav-link"><i class="bi bi-people"></i>Nhân sự</a>{% endif %}
     <div class="nav-section">Báo cáo</div>
     <a href="{% url 'reports:summary' %}" class="nav-link"><i class="bi bi-graph-up"></i>Báo cáo</a>
     <a href="{% url 'surveys:list' %}" class="nav-link"><i class="bi bi-clipboard-check"></i>Khảo sát</a>
     <a href="{% url 'feedback:list' %}" class="nav-link"><i class="bi bi-star"></i>Phản hồi</a>
-
     <div class="nav-section">Hỗ trợ</div>
     <a href="{% url 'chatbot:chat' %}" class="nav-link"><i class="bi bi-chat-dots"></i>Chatbot</a>
-    <a href="{% url 'notifications:list' %}" class="nav-link">
-      <i class="bi bi-bell"></i>Thông báo
-      {% if unread_count %}<span class="badge bg-danger ms-auto">{{ unread_count }}</span>{% endif %}
-    </a>
-
+    <a href="{% url 'notifications:list' %}" class="nav-link"><i class="bi bi-bell"></i>Thông báo{% if unread_count %}<span class="badge bg-danger ms-auto">{{ unread_count }}</span>{% endif %}</a>
     {% if user.is_admin %}
     <div class="nav-section">Hệ thống</div>
     <a href="{% url 'accounts:user_list' %}" class="nav-link"><i class="bi bi-person-gear"></i>Người dùng</a>
     <a href="{% url 'backup:list' %}" class="nav-link"><i class="bi bi-cloud-arrow-up"></i>Backup</a>
     <a href="{% url 'integration:list' %}" class="nav-link"><i class="bi bi-plug"></i>Tích hợp</a>
-    <a href="/admin/" class="nav-link"><i class="bi bi-gear"></i>Quản trị Django</a>
+    <a href="/admin/" class="nav-link"><i class="bi bi-gear"></i>Quản trị</a>
     {% endif %}
   </nav>
 </div>
-
 <div class="main-content">
   <div class="topbar">
     <div class="d-flex align-items-center gap-3">
-      <button class="btn btn-sm btn-outline-secondary d-md-none"
-              onclick="document.getElementById('sidebar').classList.toggle('show')">
-        <i class="bi bi-list"></i>
-      </button>
-      <nav>
-        <ol class="breadcrumb mb-0" style="font-size:.85rem">
-          <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Trang chủ</a></li>
-          {% if page_title %}<li class="breadcrumb-item active">{{ page_title }}</li>{% endif %}
-        </ol>
-      </nav>
+      <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="document.getElementById('sidebar').classList.toggle('show')"><i class="bi bi-list"></i></button>
+      <nav><ol class="breadcrumb mb-0" style="font-size:.85rem"><li class="breadcrumb-item"><a href="/" class="text-decoration-none">Trang chủ</a></li>{% if page_title %}<li class="breadcrumb-item active">{{ page_title }}</li>{% endif %}</ol></nav>
     </div>
     <div class="d-flex align-items-center gap-2">
-      <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-outline-secondary position-relative">
-        <i class="bi bi-bell"></i>
-        {% if unread_count %}<span class="badge bg-danger notification-badge">{{ unread_count }}</span>{% endif %}
-      </a>
+      <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-outline-secondary position-relative"><i class="bi bi-bell"></i>{% if unread_count %}<span class="badge bg-danger notification-badge">{{ unread_count }}</span>{% endif %}</a>
       <div class="dropdown">
-        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-          <i class="bi bi-person-circle me-1"></i>
-          {{ user.get_full_name|default:user.username }}
-          <span class="badge bg-secondary ms-1" style="font-size:.62rem">{{ user.get_role_display }}</span>
-        </button>
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-person-circle me-1"></i>{{ user.get_full_name|default:user.username }}<span class="badge bg-secondary ms-1" style="font-size:.62rem">{{ user.get_role_display }}</span></button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2"></i>Hồ sơ</a></li>
           <li><a class="dropdown-item" href="{% url 'accounts:change_password' %}"><i class="bi bi-key me-2"></i>Đổi mật khẩu</a></li>
@@ -153,40 +90,18 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
       </div>
     </div>
   </div>
-
   <div class="content-area">
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-      {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    {% endfor %}
-
-{% else %}
-
-<div class="guest-area">
-  {% for message in messages %}
-  <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+    {% block content %}{% endblock %}
   </div>
-  {% endfor %}
-
-{% endif %}
-
-{% block content %}{% endblock %}
-
-{% if user.is_authenticated %}
-  </div>{# end .content-area #}
-  <footer class="text-center py-3 text-muted"
-          style="font-size:.78rem; border-top:1px solid #e0e0e0; background:#fff;">
-    {{ SYSTEM_NAME }} v{{ SYSTEM_VERSION }} &copy; {% now "Y" %}
-  </footer>
-</div>{# end .main-content #}
+  <footer class="text-center py-3 text-muted" style="font-size:.78rem;border-top:1px solid #e0e0e0;background:#fff">{{ SYSTEM_NAME }} v{{ SYSTEM_VERSION }} &copy; {% now "Y" %}</footer>
+</div>
 {% else %}
-</div>{# end .guest-area #}
+<div class="container mt-4">
+{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}
+{% block content %}{% endblock %}
+</div>
 {% endif %}
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 {% block extra_js %}{% endblock %}
 </body>

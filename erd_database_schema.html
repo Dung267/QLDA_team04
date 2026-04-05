@@ -1,0 +1,330 @@
+
+<div id="erd" style="padding:8px 0"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false, theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark, fontSize: '12px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    primaryColor: dark ? '#2a2a28' : '#f5f4f0',
+    primaryBorderColor: dark ? '#555' : '#aaa',
+  },
+});
+const src = `erDiagram
+  accounts_user {
+    int id PK
+    varchar username
+    varchar email
+    varchar role
+    varchar phone
+    bool is_locked
+    bool two_factor_enabled
+    datetime date_joined
+  }
+  accounts_loginhistory {
+    int id PK
+    int user_id FK
+    varchar ip_address
+    bool is_successful
+    datetime created_at
+  }
+  accounts_usersession {
+    int id PK
+    int user_id FK
+    varchar session_key
+    varchar ip_address
+    datetime last_activity
+    bool is_active
+  }
+  accounts_otpverification {
+    int id PK
+    int user_id FK
+    varchar code
+    varchar purpose
+    bool is_used
+    datetime expires_at
+  }
+  infrastructure_managementzone {
+    int id PK
+    int manager_id FK
+    varchar name
+    varchar district
+  }
+  infrastructure_road {
+    int id PK
+    int zone_id FK
+    int created_by_id FK
+    varchar name
+    varchar code
+    varchar direction
+    varchar status
+    int quality_score
+    float length_km
+    int built_year
+    float latitude
+    float longitude
+  }
+  infrastructure_pothole {
+    int id PK
+    int road_id FK
+    int reported_by_id FK
+    varchar severity
+    bool is_repaired
+    text description
+    datetime created_at
+  }
+  infrastructure_trafficlight {
+    int id PK
+    int road_id FK
+    int zone_id FK
+    varchar code
+    varchar status
+    date installed_date
+  }
+  infrastructure_infrastructure {
+    int id PK
+    int type_id FK
+    int zone_id FK
+    varchar name
+    varchar code
+    varchar status
+    int expected_lifespan_years
+  }
+  maintenance_maintenancerequest {
+    int id PK
+    int reported_by_id FK
+    int assigned_to_id FK
+    int road_id FK
+    varchar title
+    varchar incident_type
+    varchar priority
+    varchar status
+    bool is_anonymous
+    decimal actual_cost
+    int citizen_rating
+    datetime created_at
+    datetime completed_at
+  }
+  maintenance_maintenancephoto {
+    int id PK
+    int request_id FK
+    int uploaded_by_id FK
+    varchar phase
+    varchar image
+  }
+  maintenance_maintenanceschedule {
+    int id PK
+    int road_id FK
+    int created_by_id FK
+    varchar title
+    date scheduled_date
+    varchar status
+    bool is_periodic
+  }
+  notifications_notification {
+    int id PK
+    int recipient_id FK
+    varchar title
+    text message
+    varchar notification_type
+    bool is_read
+    datetime created_at
+  }
+  inventory_material {
+    int id PK
+    int supplier_id FK
+    varchar name
+    varchar code
+    varchar unit
+    decimal unit_price
+    float current_stock
+    float min_stock
+  }
+  inventory_stocktransaction {
+    int id PK
+    int material_id FK
+    int performed_by_id FK
+    int maintenance_request_id FK
+    varchar transaction_type
+    float quantity
+    datetime created_at
+  }
+  flood_floodalert {
+    int id PK
+    int created_by_id FK
+    varchar title
+    varchar level
+    varchar area_name
+    bool is_active
+    int water_level_cm
+    datetime created_at
+  }
+  chatbot_faq {
+    int id PK
+    varchar question
+    text answer
+    varchar category
+    int view_count
+    bool is_active
+  }
+  chatbot_chatsession {
+    int id PK
+    int user_id FK
+    varchar session_id
+    int rating
+    datetime started_at
+  }
+  hr_employee {
+    int id PK
+    int user_id FK
+    int department_id FK
+    varchar employee_id
+    varchar position
+    date hire_date
+    decimal salary
+  }
+  hr_workassignment {
+    int id PK
+    int employee_id FK
+    int assigned_by_id FK
+    varchar title
+    varchar status
+    date due_date
+  }
+  hr_leaverequest {
+    int id PK
+    int employee_id FK
+    int approved_by_id FK
+    varchar leave_type
+    varchar status
+    date start_date
+  }
+  contracts_contract {
+    int id PK
+    int contractor_id FK
+    int created_by_id FK
+    varchar contract_number
+    varchar status
+    decimal value
+    date start_date
+    date end_date
+  }
+  contracts_tender {
+    int id PK
+    int awarded_to_id FK
+    int result_contract_id FK
+    varchar title
+    decimal budget
+    varchar status
+  }
+  weather_weatherdata {
+    int id PK
+    varchar location
+    float temperature
+    int humidity
+    float rain_mm
+    bool is_dangerous
+    datetime recorded_at
+  }
+  permits_constructionpermit {
+    int id PK
+    int applicant_id FK
+    int assigned_reviewer_id FK
+    varchar permit_number
+    varchar title
+    varchar status
+    date start_date
+  }
+  vehicle_inspection_vehicle {
+    int id PK
+    int owner_id FK
+    varchar license_plate
+    varchar vehicle_type
+    varchar brand
+  }
+  vehicle_inspection_inspection {
+    int id PK
+    int vehicle_id FK
+    int center_id FK
+    int inspector_id FK
+    varchar status
+    decimal fee
+    bool is_fee_paid
+    datetime scheduled_date
+  }
+  feedback_systemfeedback {
+    int id PK
+    int author_id FK
+    int rating
+    text content
+    varchar status
+    bool is_anonymous
+    int likes
+  }
+  backup_backuprecord {
+    int id PK
+    int created_by_id FK
+    varchar file_name
+    varchar backup_type
+    varchar status
+    float file_size_mb
+    datetime started_at
+  }
+
+  accounts_user ||--o{ accounts_loginhistory : "has"
+  accounts_user ||--o{ accounts_usersession : "has"
+  accounts_user ||--o{ accounts_otpverification : "has"
+  accounts_user ||--o{ infrastructure_managementzone : "manages"
+  accounts_user ||--o{ infrastructure_road : "creates"
+  accounts_user ||--o{ infrastructure_pothole : "reports"
+  accounts_user ||--o{ maintenance_maintenancerequest : "reports"
+  accounts_user ||--o{ maintenance_maintenancerequest : "assigned"
+  accounts_user ||--o{ maintenance_maintenanceschedule : "creates"
+  accounts_user ||--o{ notifications_notification : "receives"
+  accounts_user ||--o{ chatbot_chatsession : "starts"
+  accounts_user ||--o{ hr_employee : "profile"
+  accounts_user ||--o{ hr_workassignment : "assigns"
+  accounts_user ||--o{ hr_leaverequest : "approves"
+  accounts_user ||--o{ contracts_contract : "creates"
+  accounts_user ||--o{ permits_constructionpermit : "applies"
+  accounts_user ||--o{ vehicle_inspection_vehicle : "owns"
+  accounts_user ||--o{ vehicle_inspection_inspection : "inspects"
+  accounts_user ||--o{ feedback_systemfeedback : "writes"
+  accounts_user ||--o{ backup_backuprecord : "triggers"
+  accounts_user ||--o{ flood_floodalert : "creates"
+  infrastructure_road ||--o{ infrastructure_pothole : "has"
+  infrastructure_road ||--o{ infrastructure_trafficlight : "has"
+  infrastructure_road ||--o{ maintenance_maintenancerequest : "linked"
+  infrastructure_managementzone ||--o{ infrastructure_road : "contains"
+  infrastructure_managementzone ||--o{ infrastructure_trafficlight : "manages"
+  maintenance_maintenancerequest ||--o{ maintenance_maintenancephoto : "has"
+  inventory_material ||--o{ inventory_stocktransaction : "tracked"
+  maintenance_maintenancerequest ||--o{ inventory_stocktransaction : "uses"
+  hr_employee ||--o{ hr_workassignment : "assigned"
+  hr_employee ||--o{ hr_leaverequest : "requests"
+  vehicle_inspection_vehicle ||--o{ vehicle_inspection_inspection : "undergoes"
+  contracts_contractor ||--o{ contracts_contract : "signs"
+  contracts_tender ||--o| contracts_contract : "results in"
+`;
+const { svg } = await mermaid.render('erd-svg', src);
+document.getElementById('erd').innerHTML = svg;
+document.querySelectorAll('#erd .node').forEach(node => {
+  const fp = node.querySelector('path[d]');
+  if (!fp) return;
+  const d = fp.getAttribute('d'), nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0],nums[2],nums[4],nums[6]], ys = [nums[1],nums[3],nums[5],nums[7]];
+  const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',x);rect.setAttribute('y',y);rect.setAttribute('width',w);rect.setAttribute('height',h);rect.setAttribute('rx','8');
+  for(const a of ['fill','stroke','stroke-width','class','style']) if(fp.hasAttribute(a)) rect.setAttribute(a,fp.getAttribute(a));
+  fp.replaceWith(rect);
+});
+document.querySelectorAll('#erd .row-rect-odd path,#erd .row-rect-even path').forEach(p=>p.setAttribute('stroke','none'));
+</script>

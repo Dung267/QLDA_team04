@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<style>
+#chat-box{height:420px;overflow-y:auto;background:#f8f9fa;border-radius:12px;padding:16px}
+.msg-user{text-align:right}.msg-user .bubble{background:#3498db;color:#fff;border-radius:18px 18px 4px 18px;display:inline-block;padding:10px 16px;max-width:75%;text-align:left}
+.msg-bot .bubble{background:#fff;color:#333;border-radius:18px 18px 18px 4px;display:inline-block;padding:10px 16px;max-width:75%;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+</style>
+{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4"><i class="bi bi-chat-dots me-2 text-primary"></i>Hỗ trợ Chatbot</h4>
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header fw-bold d-flex align-items-center gap-2">
+        <div class="rounded-circle bg-success" style="width:10px;height:10px"></div>Bot hỗ trợ đang hoạt động
+      </div>
+      <div class="card-body p-0">
+        <div id="chat-box" class="p-3">
+          <div class="msg-bot mb-3"><div class="bubble">Xin chào! Tôi là trợ lý của Hệ thống Hạ tầng Đô thị 👋<br>Tôi có thể giúp bạn về:<br>• Gửi phản ánh sự cố<br>• Đăng kiểm phương tiện<br>• Giấy phép thi công<br>• Cảnh báo ngập lụt<br>Bạn cần hỗ trợ gì?</div></div>
+        </div>
+        <div class="p-3 border-top">
+          <div class="input-group">
+            <input type="text" id="msg-input" class="form-control" placeholder="Nhập câu hỏi..." autocomplete="off">
+            <button class="btn btn-primary" id="send-btn"><i class="bi bi-send"></i></button>
+          </div>
+          <div class="mt-2 d-flex gap-2 flex-wrap" id="suggestions">
+            <button class="btn btn-sm btn-outline-secondary suggestion">Gửi phản ánh như thế nào?</button>
+            <button class="btn btn-sm btn-outline-secondary suggestion">Đặt lịch đăng kiểm xe</button>
+            <button class="btn btn-sm btn-outline-secondary suggestion">Xin giấy phép thi công</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header fw-bold">Câu hỏi phổ biến</div>
+    <div class="card-body p-0" id="faq-list">
+      <div class="p-3 text-center text-muted small">Đang tải...</div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const sessionId = 'sess_' + Date.now();
+const chatBox = document.getElementById('chat-box');
+const input = document.getElementById('msg-input');
+
+function addMsg(text, sender) {
+  const div = document.createElement('div');
+  div.className = `msg-${sender} mb-3`;
+  div.innerHTML = `<div class="bubble">${text}</div>`;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function sendMsg(text) {
+  if (!text.trim()) return;
+  addMsg(text, 'user');
+  input.value = '';
+  document.getElementById('suggestions').style.display = 'none';
+  const resp = await fetch('{% url "chatbot:api" %}', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+    body: JSON.stringify({message: text, session_id: sessionId})
+  });
+  const data = await resp.json();
+  addMsg(data.reply, 'bot');
+}
+
+document.getElementById('send-btn').addEventListener('click', () => sendMsg(input.value));
+input.addEventListener('keypress', e => { if(e.key==='Enter') sendMsg(input.value); });
+document.querySelectorAll('.suggestion').forEach(b => b.addEventListener('click', () => sendMsg(b.textContent)));
+
+// Load FAQ
+fetch('{% url "chatbot:questions" %}').then(r=>r.json()).then(data => {
+  const el = document.getElementById('faq-list');
+  if (!data.questions.length) { el.innerHTML='<div class="p-3 text-muted small">Chưa có câu hỏi</div>'; return; }
+  el.innerHTML = data.questions.map(q=>`<div class="p-2 border-bottom"><a href="#" class="text-decoration-none small faq-q" data-q="${q.question}">${q.question}</a></div>`).join('');
+  document.querySelectorAll('.faq-q').forEach(a => a.addEventListener('click', e => { e.preventDefault(); sendMsg(a.dataset.q); }));
+});
+</script>
+{% endblock %}

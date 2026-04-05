@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2 text-primary"></i>Bảng điều khiển</h4>
+  <span class="text-muted small">{% now "d/m/Y H:i" %}</span>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:linear-gradient(135deg,#3498db,#1abc9c)">
+      <div class="card-body p-3">
+        <div style="font-size:1.8rem;font-weight:700">{{ stats.total_roads }}</div>
+        <div style="font-size:.82rem;opacity:.9"><i class="bi bi-signpost-2 me-1"></i>Tuyến đường</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:linear-gradient(135deg,#e74c3c,#c0392b)">
+      <div class="card-body p-3">
+        <div style="font-size:1.8rem;font-weight:700">{{ stats.pending_maintenance }}</div>
+        <div style="font-size:.82rem;opacity:.9"><i class="bi bi-exclamation-triangle me-1"></i>Chờ xử lý</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:linear-gradient(135deg,#f39c12,#e67e22)">
+      <div class="card-body p-3">
+        <div style="font-size:1.8rem;font-weight:700">{{ stats.in_progress_maintenance }}</div>
+        <div style="font-size:.82rem;opacity:.9"><i class="bi bi-tools me-1"></i>Đang xử lý</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:linear-gradient(135deg,#27ae60,#2ecc71)">
+      <div class="card-body p-3">
+        <div style="font-size:1.8rem;font-weight:700">{{ stats.completed_this_month }}</div>
+        <div style="font-size:.82rem;opacity:.9"><i class="bi bi-check-circle me-1"></i>HT tháng này</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:linear-gradient(135deg,#8e44ad,#9b59b6)">
+      <div class="card-body p-3">
+        <div style="font-size:1.8rem;font-weight:700">{{ stats.total_lights }}</div>
+        <div style="font-size:.82rem;opacity:.9"><i class="bi bi-traffic-light me-1"></i>Đèn giao thông</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:linear-gradient(135deg,#16a085,#1abc9c)">
+      <div class="card-body p-3">
+        <div style="font-size:1.8rem;font-weight:700">{{ stats.pending_inspections }}</div>
+        <div style="font-size:.82rem;opacity:.9"><i class="bi bi-car-front me-1"></i>Đăng kiểm chờ</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white {% if stats.active_flood_alerts %}bg-danger{% else %}bg-success{% endif %}">
+      <div class="card-body p-3">
+        <div style="font-size:1.8rem;font-weight:700">{{ stats.active_flood_alerts }}</div>
+        <div style="font-size:.82rem;opacity:.9"><i class="bi bi-water me-1"></i>Cảnh báo ngập</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:linear-gradient(135deg,#2c3e50,#34495e)">
+      <div class="card-body p-3">
+        <div style="font-size:1.8rem;font-weight:700">{{ stats.unread_notifications }}</div>
+        <div style="font-size:.82rem;opacity:.9"><i class="bi bi-bell me-1"></i>Thông báo mới</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Recent Requests -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0"><i class="bi bi-list-check me-2 text-primary"></i>Phản ánh gần đây</h6>
+        <a href="{% url 'maintenance:request_list' %}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" style="font-size:.84rem">
+            <thead class="table-light"><tr><th>Tiêu đề</th><th>Loại</th><th>Ưu tiên</th><th>Trạng thái</th><th>Ngày</th></tr></thead>
+            <tbody>
+              {% for r in recent_requests %}
+              <tr>
+                <td><a href="{% url 'maintenance:request_detail' r.pk %}" class="text-decoration-none fw-medium">{{ r.title|truncatechars:40 }}</a></td>
+                <td>{{ r.get_incident_type_display }}</td>
+                <td><span class="badge bg-{% if r.priority == 'urgent' %}danger{% elif r.priority == 'high' %}warning{% else %}secondary{% endif %}">{{ r.get_priority_display }}</span></td>
+                <td><span class="badge bg-{% if r.status == 'completed' %}success{% elif r.status == 'in_progress' %}info{% elif r.status == 'pending' %}warning{% else %}secondary{% endif %}">{{ r.get_status_display }}</span></td>
+                <td class="text-muted">{{ r.created_at|date:"d/m/Y" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-center text-muted py-3">Chưa có phản ánh nào</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar panels -->
+  <div class="col-lg-4">
+    <!-- Flood alerts -->
+    {% if flood_alerts %}
+    <div class="card border-danger mb-3">
+      <div class="card-header bg-danger text-white py-2">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-water me-2"></i>Cảnh báo ngập lụt</h6>
+      </div>
+      <div class="card-body p-0">
+        {% for a in flood_alerts %}
+        <div class="p-3 border-bottom">
+          <div class="fw-medium text-danger" style="font-size:.85rem">{{ a.title }}</div>
+          <div class="text-muted" style="font-size:.78rem">{{ a.area_name }} – Cấp {{ a.level }}</div>
+        </div>
+        {% endfor %}
+        <div class="p-2 text-center"><a href="{% url 'flood:alert_list' %}" class="btn btn-sm btn-outline-danger">Xem tất cả</a></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick links -->
+    <div class="card">
+      <div class="card-header py-2"><h6 class="mb-0 fw-bold"><i class="bi bi-lightning me-2 text-warning"></i>Thao tác nhanh</h6></div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{% url 'maintenance:request_create' %}" class="btn btn-warning btn-sm"><i class="bi bi-plus-circle me-1"></i>Gửi phản ánh mới</a>
+          <a href="{% url 'permits:create' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-plus me-1"></i>Xin giấy phép thi công</a>
+          <a href="{% url 'vehicle_inspection:schedule' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-calendar-plus me-1"></i>Đặt lịch đăng kiểm</a>
+          {% if user.is_staff_member %}
+          <a href="{% url 'reports:export_excel' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Xuất báo cáo Excel</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Danh sách phản ánh</h4>
+  <a href="{% url 'maintenance:request_create' %}" class="btn btn-warning"><i class="bi bi-plus-circle me-1"></i>Gửi phản ánh</a>
+</div>
+<!-- Filters -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-sm-3"><input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Tìm kiếm..."></div>
+      <div class="col-sm-2"><select name="status" class="form-select form-select-sm"><option value="">Trạng thái</option>{% for v,l in status_choices %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+      <div class="col-sm-2"><select name="type" class="form-select form-select-sm"><option value="">Loại sự cố</option>{% for v,l in type_choices %}<option value="{{ v }}" {% if request.GET.type == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+      <div class="col-sm-2"><select name="priority" class="form-select form-select-sm"><option value="">Ưu tiên</option>{% for v,l in priority_choices %}<option value="{{ v }}" {% if request.GET.priority == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+      <div class="col-sm-2"><input type="date" name="date_from" value="{{ request.GET.date_from }}" class="form-control form-control-sm"></div>
+      <div class="col-sm-1"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-search"></i></button></div>
+    </form>
+  </div>
+</div>
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:.85rem">
+        <thead class="table-light"><tr><th>#</th><th>Tiêu đề</th><th>Loại</th><th>Ưu tiên</th><th>Trạng thái</th><th>Người báo</th><th>Ngày tạo</th><th></th></tr></thead>
+        <tbody>
+          {% for r in page_obj %}
+          <tr>
+            <td class="text-muted">#{{ r.pk }}</td>
+            <td><a href="{% url 'maintenance:request_detail' r.pk %}" class="fw-medium text-decoration-none">{{ r.title|truncatechars:45 }}</a>
+              {% if r.is_duplicate %}<span class="badge bg-secondary ms-1" style="font-size:.65rem">Trùng</span>{% endif %}</td>
+            <td>{{ r.get_incident_type_display }}</td>
+            <td><span class="badge bg-{% if r.priority == 'urgent' %}danger{% elif r.priority == 'high' %}warning text-dark{% elif r.priority == 'medium' %}info{% else %}secondary{% endif %}">{{ r.get_priority_display }}</span></td>
+            <td><span class="badge bg-{% if r.status == 'completed' %}success{% elif r.status == 'in_progress' %}info{% elif r.status == 'pending' %}warning text-dark{% elif r.status == 'rejected' %}danger{% else %}secondary{% endif %}">{{ r.get_status_display }}</span></td>
+            <td>{% if r.is_anonymous %}Ẩn danh{% else %}{{ r.reported_by.get_full_name|default:r.reported_by.username }}{% endif %}</td>
+            <td class="text-muted">{{ r.created_at|date:"d/m/Y" }}</td>
+            <td><a href="{% url 'maintenance:request_detail' r.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+          </tr>
+          {% empty %}<tr><td colspan="8" class="text-center py-4 text-muted">Không có phản ánh nào</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="p-3 d-flex justify-content-center">
+      <nav><ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>{% endif %}
+        <li class="page-item active"><a class="page-link">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</a></li>
+        {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>{% endif %}
+      </ul></nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

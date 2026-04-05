@@ -1,0 +1,353 @@
+[
+  {
+    "model": "infrastructure.infrastructuretype",
+    "pk": 1,
+    "fields": {
+      "name": "Cầu",
+      "code": "BRIDGE",
+      "description": "Cầu đường bộ",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.infrastructuretype",
+    "pk": 2,
+    "fields": {
+      "name": "Hầm chui",
+      "code": "TUNNEL",
+      "description": "Hầm đường bộ",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.infrastructuretype",
+    "pk": 3,
+    "fields": {
+      "name": "Cống thoát nước",
+      "code": "DRAIN",
+      "description": "Hệ thống thoát nước",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.infrastructuretype",
+    "pk": 4,
+    "fields": {
+      "name": "Biển báo",
+      "code": "SIGN",
+      "description": "Biển báo giao thông",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.infrastructuretype",
+    "pk": 5,
+    "fields": {
+      "name": "Vỉa hè",
+      "code": "SIDEWALK",
+      "description": "Vỉa hè, hành lang",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.managementzone",
+    "pk": 1,
+    "fields": {
+      "name": "Khu vực Hải Châu",
+      "district": "Hải Châu",
+      "description": "Quận trung tâm",
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.managementzone",
+    "pk": 2,
+    "fields": {
+      "name": "Khu vực Thanh Khê",
+      "district": "Thanh Khê",
+      "description": "Quận phía Tây",
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.managementzone",
+    "pk": 3,
+    "fields": {
+      "name": "Khu vực Sơn Trà",
+      "district": "Sơn Trà",
+      "description": "Quận bán đảo",
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.managementzone",
+    "pk": 4,
+    "fields": {
+      "name": "Khu vực Ngũ Hành Sơn",
+      "district": "Ngũ Hành Sơn",
+      "description": "Quận phía Nam",
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "infrastructure.managementzone",
+    "pk": 5,
+    "fields": {
+      "name": "Khu vực Liên Chiểu",
+      "district": "Liên Chiểu",
+      "description": "Quận phía Bắc",
+      "manager": null,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "documents.documentcategory",
+    "pk": 1,
+    "fields": {
+      "name": "Thiết kế kỹ thuật",
+      "code": "DESIGN",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "documents.documentcategory",
+    "pk": 2,
+    "fields": {
+      "name": "Hợp đồng",
+      "code": "CONTRACT",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "documents.documentcategory",
+    "pk": 3,
+    "fields": {
+      "name": "Báo cáo",
+      "code": "REPORT",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "documents.documentcategory",
+    "pk": 4,
+    "fields": {
+      "name": "Quy hoạch",
+      "code": "PLAN",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "documents.documentcategory",
+    "pk": 5,
+    "fields": {
+      "name": "Pháp lý",
+      "code": "LEGAL",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "vehicle_inspection.inspectioncenter",
+    "pk": 1,
+    "fields": {
+      "name": "Trung tâm Đăng kiểm 43-01D",
+      "address": "123 Điện Biên Phủ, Hải Châu, Đà Nẵng",
+      "phone": "0236-3822001",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "vehicle_inspection.inspectioncenter",
+    "pk": 2,
+    "fields": {
+      "name": "Trung tâm Đăng kiểm 43-02D",
+      "address": "456 Nguyễn Văn Linh, Thanh Khê, Đà Nẵng",
+      "phone": "0236-3812002",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "chatbot.faq",
+    "pk": 1,
+    "fields": {
+      "question": "Làm thế nào để gửi phản ánh sự cố?",
+      "answer": "Để gửi phản ánh, vào mục 'Bảo trì > Gửi phản ánh', chọn loại sự cố, mô tả chi tiết và đính kèm ảnh nếu có. Sau khi gửi, bạn sẽ nhận mã theo dõi.",
+      "category": "Bảo trì",
+      "keywords": "phản ánh,sự cố,báo cáo,gửi phản ánh",
+      "view_count": 150,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "chatbot.faq",
+    "pk": 2,
+    "fields": {
+      "question": "Cách đặt lịch đăng kiểm xe?",
+      "answer": "Vào mục 'Đăng kiểm xe > Đặt lịch', chọn phương tiện, trung tâm đăng kiểm và thời gian mong muốn. Bạn sẽ nhận thông báo xác nhận.",
+      "category": "Đăng kiểm",
+      "keywords": "đăng kiểm,xe,đặt lịch,phương tiện",
+      "view_count": 120,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "chatbot.faq",
+    "pk": 3,
+    "fields": {
+      "question": "Xin giấy phép thi công cần những gì?",
+      "answer": "Cần: bản vẽ thi công, hồ sơ pháp lý doanh nghiệp, đánh giá tác động hạ tầng. Nộp hồ sơ tại 'Giấy phép thi công > Tạo hồ sơ'.",
+      "category": "Giấy phép",
+      "keywords": "giấy phép,thi công,xin phép,hồ sơ",
+      "view_count": 95,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "chatbot.faq",
+    "pk": 4,
+    "fields": {
+      "question": "Xem cảnh báo ngập lụt ở đâu?",
+      "answer": "Cảnh báo ngập lụt cập nhật tại mục 'Cảnh báo > Ngập lụt'. Bạn cũng nhận thông báo tự động qua SMS và hệ thống khi có cảnh báo mới.",
+      "category": "Ngập lụt",
+      "keywords": "ngập,lụt,bão,cảnh báo,lũ",
+      "view_count": 200,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "chatbot.faq",
+    "pk": 5,
+    "fields": {
+      "question": "Theo dõi tiến độ xử lý phản ánh như thế nào?",
+      "answer": "Vào 'Bảo trì > Danh sách phản ánh', tìm phản ánh theo mã hoặc danh sách. Bạn cũng nhận thông báo tự động mỗi khi trạng thái thay đổi.",
+      "category": "Bảo trì",
+      "keywords": "theo dõi,tiến độ,trạng thái,xử lý",
+      "view_count": 80,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "integration.apiintegration",
+    "pk": 1,
+    "fields": {
+      "name": "SMS Gateway (VNPT)",
+      "api_key": "",
+      "endpoint": "https://api.sms.vnpt.vn/",
+      "status": "inactive",
+      "last_sync": null,
+      "error_message": "",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "integration.apiintegration",
+    "pk": 2,
+    "fields": {
+      "name": "Email Service (SendGrid)",
+      "api_key": "",
+      "endpoint": "https://api.sendgrid.com/v3/",
+      "status": "inactive",
+      "last_sync": null,
+      "error_message": "",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "integration.apiintegration",
+    "pk": 3,
+    "fields": {
+      "name": "OpenWeatherMap API",
+      "api_key": "",
+      "endpoint": "https://api.openweathermap.org/data/2.5/",
+      "status": "inactive",
+      "last_sync": null,
+      "error_message": "",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "integration.apiintegration",
+    "pk": 4,
+    "fields": {
+      "name": "Hệ thống Đăng kiểm Quốc gia",
+      "api_key": "",
+      "endpoint": "https://api.dangkiem.gov.vn/",
+      "status": "inactive",
+      "last_sync": null,
+      "error_message": "",
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "reports.reporttemplate",
+    "pk": 1,
+    "fields": {
+      "name": "Báo cáo tháng - Sự cố hạ tầng",
+      "report_type": "monthly",
+      "description": "Thống kê sự cố theo tháng",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "reports.reporttemplate",
+    "pk": 2,
+    "fields": {
+      "name": "Báo cáo quý - Bảo trì tổng hợp",
+      "report_type": "quarterly",
+      "description": "Thống kê bảo trì theo quý",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  },
+  {
+    "model": "reports.reporttemplate",
+    "pk": 3,
+    "fields": {
+      "name": "Báo cáo năm - Hiệu suất xử lý",
+      "report_type": "yearly",
+      "description": "Đánh giá hiệu suất năm",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00+00:00",
+      "updated_at": "2024-01-01T00:00:00+00:00"
+    }
+  }
+]

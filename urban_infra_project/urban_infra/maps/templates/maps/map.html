@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>#map{height:600px;border-radius:12px}</style>
+{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-3"><i class="bi bi-map me-2 text-primary"></i>Bản đồ hạ tầng đô thị</h4>
+<div class="card mb-3"><div class="card-body py-2">
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-sm btn-outline-primary" onclick="loadLayer('roads')"><i class="bi bi-signpost-2 me-1"></i>Đường</button>
+    <button class="btn btn-sm btn-outline-warning" onclick="loadLayer('lights')"><i class="bi bi-traffic-light me-1"></i>Đèn GT</button>
+    <button class="btn btn-sm btn-outline-danger" onclick="loadLayer('incidents')"><i class="bi bi-exclamation-triangle me-1"></i>Sự cố</button>
+    <button class="btn btn-sm btn-outline-info" onclick="loadLayer('floods')"><i class="bi bi-water me-1"></i>Ngập lụt</button>
+    <button class="btn btn-sm btn-success" onclick="loadLayer('all')"><i class="bi bi-layers me-1"></i>Tất cả</button>
+  </div>
+</div></div>
+<div id="map"></div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const map = L.map('map').setView([16.047, 108.206], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap'}).addTo(map);
+let layers = {};
+
+function clearLayers() { Object.values(layers).forEach(l => map.removeLayer(l)); layers = {}; }
+
+function loadLayer(type) {
+  clearLayers();
+  fetch(`{% url 'maps:data_api' %}?layer=${type}`).then(r=>r.json()).then(data => {
+    if (data.roads) data.roads.forEach(r => {
+      if (r.latitude && r.longitude) {
+        const m = L.circleMarker([r.latitude, r.longitude], {color:'blue',radius:8}).addTo(map);
+        m.bindPopup(`<b>${r.name}</b><br>Trạng thái: ${r.status}`);
+      }
+    });
+    if (data.lights) data.lights.forEach(l => {
+      if (l.latitude && l.longitude) {
+        const m = L.circleMarker([l.latitude, l.longitude], {color:'orange',radius:6}).addTo(map);
+        m.bindPopup(`<b>Đèn ${l.code}</b><br>${l.location}<br>Trạng thái: ${l.status}`);
+      }
+    });
+    if (data.incidents) data.incidents.forEach(i => {
+      if (i.latitude && i.longitude) {
+        const m = L.circleMarker([i.latitude, i.longitude], {color:'red',radius:7}).addTo(map);
+        m.bindPopup(`<b>${i.title}</b><br>Loại: ${i.incident_type}`);
+      }
+    });
+    if (data.floods) data.floods.forEach(f => {
+      if (f.latitude && f.longitude) {
+        const m = L.circleMarker([f.latitude, f.longitude], {color:'cyan',radius:10,fillOpacity:0.5}).addTo(map);
+        m.bindPopup(`<b>${f.title}</b><br>Khu vực: ${f.area_name}<br>Cấp ${f.level}`);
+      }
+    });
+  });
+}
+loadLayer('all');
+</script>
+{% endblock %}

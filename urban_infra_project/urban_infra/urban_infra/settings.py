@@ -11,14 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production-!!!')
 DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = ['*']
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.trycloudflare.com',
-    'https://urban-infra.duckdns.org',
-    'https://urbaninfraqldateam04.us.kg'
-    'http://localhost:8000',
-]
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -75,7 +68,7 @@ ROOT_URLCONF = 'urban_infra.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
