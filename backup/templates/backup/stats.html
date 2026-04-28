@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">Thống kê Backup</h4>
+    <a href="{% url 'backup:list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-2"></i>Quay lại
+    </a>
+  </div>
+
+  <!-- Overview Stats Row -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-1">Tổng Backup</h6>
+              <h3 class="fw-bold">{{ stats.total_count }}</h3>
+              <small class="text-success">
+                ✓ {{ stats.success_count }} thành công
+              </small>
+            </div>
+            <i class="bi bi-archive" style="font-size: 1.5rem; opacity: 0.5;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-1">Tỷ lệ Thành công</h6>
+              <h3 class="fw-bold text-success">{{ stats.success_rate }}</h3>
+              <small>
+                ❌ {{ stats.failed_count }} thất bại
+              </small>
+            </div>
+            <i class="bi bi-percent" style="font-size: 1.5rem; color: #198754;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-1">Tổng Dung lượng</h6>
+              <h3 class="fw-bold">{{ stats.total_size_mb }} MB</h3>
+              <small>
+                Trung bình: {{ stats.avg_size_mb }} MB
+              </small>
+            </div>
+            <i class="bi bi-hdd" style="font-size: 1.5rem; opacity: 0.5;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-1">Restore Success</h6>
+              <h3 class="fw-bold text-info">{{ stats.restore_success_rate }}</h3>
+              <small>
+                ({{ stats.successful_restores }}/{{ stats.restore_count }})
+              </small>
+            </div>
+            <i class="bi bi-arrow-counterclockwise" style="font-size: 1.5rem; color: #0d6efd;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row mb-4">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-bold">
+            <i class="bi bi-pie-chart me-2"></i>Backup theo Loại
+          </h6>
+        </div>
+        <div class="card-body">
+          <div id="backupTypeChart" style="height: 300px;"></div>
+          <div class="mt-3">
+            <table class="table table-sm">
+              <thead class="table-light">
+                <tr>
+                  <th>Loại</th>
+                  <th>Số lượng</th>
+                  <th>Dung lượng</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in backup_by_type %}
+                <tr>
+                  <td>
+                    <span class="badge bg-light text-dark">{{ item.backup_type }}</span>
+                  </td>
+                  <td>{{ item.count }}</td>
+                  <td>{{ item.total_size|floatformat:2 }} MB</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted">Chưa có dữ liệu</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-bold">
+            <i class="bi bi-bar-chart me-2"></i>Status Backup
+          </h6>
+        </div>
+        <div class="card-body">
+          <div id="backupStatusChart" style="height: 300px;"></div>
+          <div class="mt-3">
+            <div class="row g-2">
+              <div class="col-6">
+                <div class="p-2 bg-light rounded">
+                  <div class="text-success fw-bold">✓ {{ stats.success_count }}</div>
+                  <small class="text-muted">Thành công</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-2 bg-light rounded">
+                  <div class="text-danger fw-bold">✗ {{ stats.failed_count }}</div>
+                  <small class="text-muted">Thất bại</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-2 bg-light rounded">
+                  <div class="text-info fw-bold">↻ {{ stats.running_count }}</div>
+                  <small class="text-muted">Đang chạy</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-2 bg-light rounded">
+                  <div class="text-warning fw-bold">{{ stats.total_count }}</div>
+                  <small class="text-muted">Tổng cộng</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Backups -->
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h6 class="mb-0 fw-bold">
+        <i class="bi bi-clock-history me-2"></i>Backup Gần Đây (7 ngày)
+      </h6>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="font-size: 0.9rem;">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Tên file</th>
+              <th>Loại</th>
+              <th>Trạng thái</th>
+              <th>Dung lượng</th>
+              <th>Thời gian</th>
+              <th>Tạo bởi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for backup in recent_backups %}
+            <tr>
+              <td>
+                <small>{{ backup.file_name }}</small>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark">{{ backup.backup_type }}</span>
+              </td>
+              <td>
+                {% with status=backup.status %}
+                  {% if status == 'success' %}
+                    <span class="badge bg-success">✓ Thành công</span>
+                  {% elif status == 'running' %}
+                    <span class="badge bg-info">↻ Đang chạy</span>
+                  {% elif status == 'failed' %}
+                    <span class="badge bg-danger">✗ Thất bại</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ status }}</span>
+                  {% endif %}
+                {% endwith %}
+              </td>
+              <td>
+                <code>{{ backup.file_size_mb|floatformat:2 }} MB</code>
+              </td>
+              <td>
+                <small class="text-muted">{{ backup.started_at|date:"d/m/Y H:i" }}</small>
+              </td>
+              <td>
+                <small>{{ backup.created_by.username }}</small>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3">
+                Chưa có backup trong 7 ngày gần đây
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Metrics -->
+  <div class="row">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-bold">
+            <i class="bi bi-lightning me-2"></i>Performance
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <label class="small">Tỷ lệ thành công</label>
+              <span class="small fw-bold">{{ stats.success_rate }}</span>
+            </div>
+            <div class="progress">
+              <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.success_rate }}"></div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <label class="small">Restore thành công</label>
+              <span class="small fw-bold">{{ stats.restore_success_rate }}</span>
+            </div>
+            <div class="progress">
+              <div class="progress-bar bg-info" role="progressbar" style="width: {{ stats.restore_success_rate }}"></div>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="small">
+            <p class="mb-2">
+              <strong>Tổng backup:</strong> {{ stats.total_count }}
+              <span class="badge bg-success">{{ stats.success_count }} ✓</span>
+              <span class="badge bg-danger">{{ stats.failed_count }} ✗</span>
+            </p>
+            <p class="mb-2">
+              <strong>Tổng restore:</strong> {{ stats.restore_count }}
+              <span class="badge bg-success">{{ stats.successful_restores }} ✓</span>
+            </p>
+            <p>
+              <strong>Dung lượng trung bình:</strong> {{ stats.avg_size_mb }} MB
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-bold">
+            <i class="bi bi-info-circle me-2"></i>Khuyến nghị
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info">
+            <h6 class="alert-heading">💡 Lời khuyên</h6>
+            <ul class="mb-0">
+              <li>Thực hiện backup thường xuyên (ít nhất hàng tuần)</li>
+              <li>Kiểm tra tỷ lệ thành công định kỳ</li>
+              <li>Test restore thỉnh thoảng để đảm bảo dữ liệu</li>
+              <li>Lưu giữ ít nhất 3-5 bản backup gần đây</li>
+              <li>Bật nén file để tiết kiệm dung lượng</li>
+              <li>Upload backup lên cloud để dự phòng</li>
+            </ul>
+          </div>
+
+          {% if stats.failed_count > 0 %}
+          <div class="alert alert-warning">
+            <h6 class="alert-heading">⚠️ Cảnh báo</h6>
+            <p class="mb-0">
+              Có {{ stats.failed_count }} backup thất bại. 
+              <a href="{% url 'backup:list' %}">Kiểm tra danh sách</a>
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js Library -->
+{{ backup_by_type|json_script:"backup-type-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<script>
+  const backupTypeData = JSON.parse(document.getElementById('backup-type-data').textContent || '[]');
+  const backupTypeLabels = backupTypeData.map((item) => item.backup_type);
+  const backupTypeCounts = backupTypeData.map((item) => item.count);
+  const backupTypeColors = ['#198754', '#0d6efd', '#fd7e14'];
+
+  // Backup Type Chart
+  const backupTypeCanvas = document.getElementById('backupTypeChart');
+  if (backupTypeCanvas) {
+    new Chart(backupTypeCanvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: backupTypeLabels,
+        datasets: [{
+          data: backupTypeCounts,
+          backgroundColor: backupTypeLabels.map((_, index) => backupTypeColors[index % backupTypeColors.length]),
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+  }
+
+  // Status Chart
+  const statusCanvas = document.getElementById('backupStatusChart');
+  if (statusCanvas) {
+    new Chart(statusCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['Thành công', 'Thất bại', 'Đang chạy'],
+        datasets: [{
+          label: 'Số lượng',
+          data: [
+            {{ stats.success_count }},
+            {{ stats.failed_count }},
+            {{ stats.running_count }}
+          ],
+          backgroundColor: [
+            '#198754',
+            '#dc3545',
+            '#0d6efd'
+          ],
+          borderColor: [
+            '#198754',
+            '#dc3545',
+            '#0d6efd'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        }
+      }
+    });
+  }
+</script>
+
+<style>
+  .fw-500 {
+    font-weight: 500;
+  }
+  table td {
+    vertical-align: middle;
+  }
+  .progress {
+    height: 25px;
+    border-radius: 5px;
+  }
+  .progress-bar {
+    border-radius: 5px;
+  }
+</style>
+{% endblock %}

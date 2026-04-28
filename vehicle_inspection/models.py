@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 User = get_user_model()
 
 class InspectionCenter(models.Model):
@@ -28,6 +29,18 @@ class Vehicle(models.Model):
         verbose_name = 'Phương tiện'
         verbose_name_plural = 'Phương tiện'
     def __str__(self): return f"{self.license_plate} ({self.get_vehicle_type_display()})"
+
+    @property
+    def inspection_expiry_date(self):
+        latest = self.inspections.filter(valid_until__isnull=False).order_by('-valid_until').first()
+        return latest.valid_until if latest else None
+
+    @property
+    def days_until_inspection_expiry(self):
+        expiry_date = self.inspection_expiry_date
+        if not expiry_date:
+            return None
+        return (expiry_date - timezone.localdate()).days
 
 class Inspection(models.Model):
     STATUS_CHOICES = [

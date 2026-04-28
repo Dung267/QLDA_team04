@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="container py-3 py-lg-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h4 class="fw-bold mb-1">{{ survey.title }}</h4>
+                <p class="text-muted mb-0">
+                    {{ survey.description|default:"Khảo sát ý kiến người dân tại Đà Nẵng."
+                    }}
+                </p>
+            </div>
+            <a href="{% url 'surveys:list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại danh sách</a>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="card border-0 shadow-sm h-100 bg-primary text-white">
+                    <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small text-white-50 mb-1">Trạng thái</div>
+                            <div class="display-6 fw-bold mb-0">
+                                {% if survey_is_open %}
+                                    Đang mở
+                                {% else %}
+                                    Đã đóng
+                                {% endif %}
+                            </div>
+                        </div>
+                        <i class="bi bi-calendar2-check fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card border-0 shadow-sm h-100 bg-warning">
+                    <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small text-dark mb-1">Lượt tham gia</div>
+                            <div class="display-6 fw-bold mb-0 text-dark">{{ response_count }}</div>
+                        </div>
+                        <i class="bi bi-people-fill fs-1 text-dark opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="small text-muted mb-1">Hạn khảo sát</div>
+                        <div class="fw-bold fs-5 mb-0">
+                            {% if survey.deadline %}
+                                {{ survey.deadline|date:"d/m/Y" }}
+                            {% else
+                                %}
+                                Không giới hạn
+                            {% endif %}
+                        </div>
+                        <div class="small text-muted mt-2">
+                            {% if user_has_responded %}
+                                Bạn đã tham gia khảo sát này.
+                            {% elif
+                                request.user.is_staff and not survey_is_open %}
+                                Khảo sát đã đóng, chỉ
+                                xem thống kê.
+                            {% else %}
+                                Bạn có thể gửi phản hồi ngay bây giờ.
+                            {% endif
+                            %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if show_stats %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold py-3">
+                    <i class="bi bi-bar-chart-line text-primary me-1"></i>Kết quả khảo sát
+                </div>
+                <div class="card-body">
+                    <div class="row g-4 mb-4">
+                        <div class="col-12 col-md-4">
+                            <div class="bg-body-tertiary rounded-3 p-4 h-100">
+                                <div class="text-muted small mb-1">Tổng lượt vote</div>
+                                <div class="display-6 fw-bold mb-0">{{ survey_stats.total_votes }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="bg-body-tertiary rounded-3 p-4 h-100">
+                                <div class="text-muted small mb-1">Điểm trung bình</div>
+                                <div class="display-6 fw-bold mb-0">{{ survey_stats.average_score_display }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="bg-body-tertiary rounded-3 p-4 h-100">
+                                <div class="text-muted small mb-1">Vai trò hiện tại</div>
+                                <div class="display-6 fw-bold mb-0 text-success">
+                                    {% if request.user.is_staff %}
+                                        Cán bộ
+                                    {% else %}
+                                        Người dân
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if survey_stats.total_votes %}
+                        <div class="row g-3">
+                            {% for item in survey_stats.breakdown %}
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="fw-semibold text-warning" style="width: 72px">{{ item.rating }} sao</div>
+                                        <div class="progress flex-grow-1" style="height: 22px">
+                                            <div class="progress-bar bg-warning text-dark fw-semibold"
+                                                 role="progressbar"
+                                                 style="width: {{ item.percentage }}%"
+                                                 aria-valuenow="{{ item.percentage }}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100">{{ item.percentage }}%</div>
+                                        </div>
+                                        <div class="text-end text-muted fw-semibold" style="width: 52px">{{ item.count }}</div>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="col-12 text-center text-muted py-4">Chưa có dữ liệu đánh giá.</div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-light border mb-0">Khảo sát này chưa có lượt đánh giá nào.</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-8 col-xl-7">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-4 p-lg-5">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                                <div>
+                                    <h5 class="fw-bold mb-1">Tham gia khảo sát</h5>
+                                    <p class="text-muted mb-0">Hãy chọn mức đánh giá của bạn về khảo sát tại Đà Nẵng.</p>
+                                </div>
+                                <span class="badge text-bg-light border text-secondary">Chưa tham gia</span>
+                            </div>
+                            <form method="post" novalidate>
+                                {% csrf_token %}
+                                <div class="mb-4">
+                                    <label class="form-label fw-semibold d-block"
+                                           for="{{ form.satisfaction_score.id_for_label }}">
+                                        {{ form.satisfaction_score.label }}
+                                    </label>
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2"
+                                         id="rating-stars"
+                                         role="group"
+                                         aria-label="Đánh giá bằng sao">
+                                        <button type="button"
+                                                class="btn btn-link p-0 star-btn"
+                                                data-value="1"
+                                                aria-label="1 sao">
+                                            <i class="bi bi-star fs-3 text-warning"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-link p-0 star-btn"
+                                                data-value="2"
+                                                aria-label="2 sao">
+                                            <i class="bi bi-star fs-3 text-warning"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-link p-0 star-btn"
+                                                data-value="3"
+                                                aria-label="3 sao">
+                                            <i class="bi bi-star fs-3 text-warning"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-link p-0 star-btn"
+                                                data-value="4"
+                                                aria-label="4 sao">
+                                            <i class="bi bi-star fs-3 text-warning"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-link p-0 star-btn"
+                                                data-value="5"
+                                                aria-label="5 sao">
+                                            <i class="bi bi-star fs-3 text-warning"></i>
+                                        </button>
+                                        <span class="small text-muted ms-2" id="rating-hint">Chưa chọn đánh giá</span>
+                                    </div>
+                                    {{ form.satisfaction_score }}
+                                    {% if form.satisfaction_score.errors
+                                        %}
+                                        <div class="text-danger small mt-1">{{ form.satisfaction_score.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mb-4">
+                                    <label for="{{ form.comments.id_for_label }}" class="form-label fw-semibold">{{ form.comments.label }}</label>
+                                    {{ form.comments }}
+                                    {% if form.comments.errors %}<div class="text-danger small mt-1">{{ form.comments.errors }}</div>{% endif %}
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-send me-1"></i>Gửi phản hồi
+                                    </button>
+                                    <a href="{% url 'surveys:list' %}" class="btn btn-outline-secondary">Quay lại danh sách</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
+{% block extra_js %}
+    {% if not show_stats and survey_is_open %}
+        <script>
+  (function () {
+    const ratingInput = document.getElementById(
+      "{{ form.satisfaction_score.id_for_label }}",
+    );
+    const starButtons = document.querySelectorAll(".star-btn");
+    const ratingHint = document.getElementById("rating-hint");
+
+    function paintStars(value) {
+      starButtons.forEach((button) => {
+        const icon = button.querySelector("i");
+        const starValue = Number(button.dataset.value);
+        icon.classList.toggle("bi-star-fill", starValue <= value);
+        icon.classList.toggle("bi-star", starValue > value);
+      });
+      ratingHint.textContent = value
+        ? `Bạn đã chọn ${value}/5 sao`
+        : "Chưa chọn đánh giá";
+    }
+
+    const initialValue = Number(ratingInput.value || 0);
+    paintStars(initialValue);
+
+    starButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const selected = Number(button.dataset.value);
+        ratingInput.value = selected;
+        paintStars(selected);
+      });
+    });
+  })();
+        </script>
+    {% endif %}
+{% endblock %}

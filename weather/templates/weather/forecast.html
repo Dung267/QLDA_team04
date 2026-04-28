@@ -1,31 +1,31 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Forecast" }}</h4>
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Du bao 7 ngay toi - {{ location }}</h5>
+            <span class="badge text-bg-light">Cap nhat theo khu vuc Da Nang</span>
+        </div>
+        <div class="d-flex gap-2 overflow-auto pb-2">
+            {% for item in forecasts %}
+                <div class="card border h-100" style="min-width: 210px;">
+                    <div class="card-body">
+                        <p class="small text-muted mb-1">{{ item.forecast_date|date:"D, d/m" }}</p>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi {{ item.icon_class }} fs-4 text-primary"></i>
+                            <strong>{{ item.temp_max|floatformat:0 }}&deg; / {{ item.temp_min|floatformat:0 }}&deg;C</strong>
+                        </div>
+                        <p class="mb-2">{{ item.description|default:"On dinh" }}</p>
+                        <p class="mb-2 small text-muted">Kha nang mua: {{ item.rain_probability }}%</p>
+                        {% if item.is_warning %}
+                            <span class="badge text-bg-danger">Canh bao mua lon</span>
+                            {% if item.warning_message %}<p class="small text-danger mt-2 mb-0">{{ item.warning_message }}</p>{% endif %}
+                        {% else %}
+                            <span class="badge text-bg-success">An toan</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <div class="text-muted">Chua co du lieu du bao.</div>
+            {% endfor %}
+        </div>
+    </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Forecast</div></div>
-{% endif %}
-{% endblock %}

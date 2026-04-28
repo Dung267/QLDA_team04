@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="card">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-chat-square-heart text-primary me-2"></i>
+                    <h5 class="mb-0 fw-bold">{{ page_title }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Chia sẻ trải nghiệm dịch vụ công và hạ tầng đô thị tại Đà Nẵng để đội ngũ cải thiện hệ thống.
+                    </p>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
+                            {{ form.category }}
+                            {% if form.category.errors %}<div class="text-danger small mt-1">{{ form.category.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.content.id_for_label }}" class="form-label">{{ form.content.label }}</label>
+                            {{ form.content }}
+                            {% if form.content.errors %}<div class="text-danger small mt-1">{{ form.content.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.rating.id_for_label }}" class="form-label">{{ form.rating.label }}</label>
+                            <div class="d-flex align-items-center gap-2 mb-2"
+                                 id="rating-stars"
+                                 role="group"
+                                 aria-label="Chọn số sao">
+                                <button type="button"
+                                        class="btn btn-link p-0 star-btn"
+                                        data-value="1"
+                                        aria-label="1 sao">
+                                    <i class="bi bi-star fs-4 text-warning"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-link p-0 star-btn"
+                                        data-value="2"
+                                        aria-label="2 sao">
+                                    <i class="bi bi-star fs-4 text-warning"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-link p-0 star-btn"
+                                        data-value="3"
+                                        aria-label="3 sao">
+                                    <i class="bi bi-star fs-4 text-warning"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-link p-0 star-btn"
+                                        data-value="4"
+                                        aria-label="4 sao">
+                                    <i class="bi bi-star fs-4 text-warning"></i>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-link p-0 star-btn"
+                                        data-value="5"
+                                        aria-label="5 sao">
+                                    <i class="bi bi-star fs-4 text-warning"></i>
+                                </button>
+                                <span class="small text-muted" id="rating-hint">Chưa chọn đánh giá</span>
+                            </div>
+                            <div class="d-none">{{ form.rating }}</div>
+                            {% if form.rating.errors %}<div class="text-danger small mt-1">{{ form.rating.errors }}</div>{% endif %}
+                        </div>
+                        <div class="form-check mb-4">
+                            {{ form.is_anonymous }}
+                            <label for="{{ form.is_anonymous.id_for_label }}" class="form-check-label">
+                                {{ form.is_anonymous.label }} (không hiển thị danh tính công khai)
+                            </label>
+                            {% if form.is_anonymous.errors %}<div class="text-danger small mt-1">{{ form.is_anonymous.errors }}</div>{% endif %}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i>Gửi phản hồi
+                            </button>
+                            <a href="{% url 'feedback:list' %}" class="btn btn-outline-secondary">Quay lại danh sách</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block extra_js %}
+    <script>
+  (function () {
+    const ratingInput = document.getElementById("{{ form.rating.id_for_label }}");
+    const starButtons = document.querySelectorAll(".star-btn");
+    const ratingHint = document.getElementById("rating-hint");
+
+    function paintStars(value) {
+      starButtons.forEach((button) => {
+        const icon = button.querySelector("i");
+        const starValue = Number(button.dataset.value);
+        icon.classList.toggle("bi-star-fill", starValue <= value);
+        icon.classList.toggle("bi-star", starValue > value);
+      });
+      ratingHint.textContent = value ? `Bạn đã chọn ${value}/5 sao` : "Chưa chọn đánh giá";
+    }
+
+    let currentValue = Number(ratingInput.value || 0);
+    if (!currentValue) {
+      currentValue = 0;
+      ratingInput.value = "";
+    }
+    paintStars(currentValue);
+
+    starButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const selected = Number(button.dataset.value);
+        ratingInput.value = selected;
+        paintStars(selected);
+      });
+    });
+  })();
+    </script>
+{% endblock %}

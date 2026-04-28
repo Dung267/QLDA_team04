@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="fw-bold mb-1">{{ page_title }}</h4>
+            <p class="text-muted mb-0">Tong hop du bao thoi tiet cho khu vuc {{ location }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <form method="post" action="{% url 'weather:sync' %}">
+                {% csrf_token %}
+                <input type="hidden" name="district" value="{{ district }}">
+                <button type="submit" class="btn btn-outline-success btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Cap nhat tu API
+                </button>
+            </form>
+            <a href="{% url 'weather:current' %}?district={{ district }}"
+               class="btn btn-outline-secondary btn-sm">Quay lai thoi tiet hien tai</a>
+        </div>
+    </div>
+    {% include "weather/_district_filter.html" %}
+    {% include "weather/forecast.html" %}
+{% endblock %}

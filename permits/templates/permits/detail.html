@@ -1,31 +1,153 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Detail" }}</h4>
-</div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Detail</div></div>
-{% endif %}
+    <style>
+  .permit-timeline {
+    border-left: 3px solid #dee2e6;
+    margin-left: 0.65rem;
+    padding-left: 1.25rem;
+  }
+  .permit-step {
+    position: relative;
+    padding-bottom: 1rem;
+  }
+  .permit-step::before {
+    content: "";
+    position: absolute;
+    left: -1.52rem;
+    top: 0.2rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #adb5bd;
+  }
+  .permit-step.active::before {
+    background: #198754;
+    box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.15);
+  }
+    </style>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h4 class="fw-bold mb-1">{{ page_title }}</h4>
+            <p class="text-muted mb-0">So Xay dung Da Nang - theo doi tien do cap phep cong trinh</p>
+        </div>
+        <a href="{% url 'permits:list' %}"
+           class="btn btn-outline-secondary btn-sm">Quay lai danh sach</a>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                            <p class="small text-muted mb-1">Ma ho so</p>
+                            <h5 class="mb-0">{{ permit.permit_number|default:"Dang cap so" }}</h5>
+                        </div>
+                        <span class="badge {% if permit.status == 'draft' %}text-bg-secondary{% elif permit.status == 'submitted' %}text-bg-info{% elif permit.status == 'reviewing' or permit.status == 'additional_required' %}text-bg-warning{% elif permit.status == 'approved' or permit.status == 'completed' %}text-bg-success{% elif permit.status == 'rejected' %}text-bg-danger{% elif permit.status == 'received' or permit.status == 'construction' %}text-bg-primary{% elif permit.status == 'suspended' %}text-bg-dark{% else %}text-bg-secondary{% endif %}">
+                            {{ permit.get_status_display }}
+                        </span>
+                    </div>
+                    <h5 class="fw-bold">{{ permit.title }}</h5>
+                    <p class="text-muted mb-3">{{ permit.description }}</p>
+                    <div class="row g-2 small">
+                        <div class="col-12 col-md-6">
+                            <strong>Nguoi nop:</strong> {{ permit.applicant_id }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <strong>Nha thau:</strong> {{ permit.contractor_name|default:"Dang cap nhat" }}
+                        </div>
+                        <div class="col-12">
+                            <strong>Dia diem:</strong> {{ permit.location }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <strong>Khoi cong:</strong> {{ permit.start_date|date:"d/m/Y"|default:"Chua xac dinh" }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <strong>Du kien hoan thanh:</strong> {{ permit.end_date|date:"d/m/Y"|default:"Chua xac dinh" }}
+                        </div>
+                    </div>
+                    {% if permit.rejection_reason %}
+                        <div class="alert alert-danger mt-3 mb-0">
+                            <strong>Ly do tu choi:</strong> {{ permit.rejection_reason }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Dong thoi gian xu ly ho so</h6>
+                    <div class="permit-timeline">
+                        {% for step in timeline %}
+                            <div class="permit-step {% if step.is_active %}active{% endif %}">
+                                <div class="fw-semibold">{{ step.label }}</div>
+                                <div class="small text-muted">
+                                    {% if step.is_active %}
+                                        Da/ dang xu ly
+                                    {% else %}
+                                        Dang cho
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if permit.status == "additional_required" %}
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <strong>Yeu cau bo sung:</strong> {{ permit.additional_required|default:"Vui long bo sung ho so theo huong dan cua can bo." }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if request.user.is_manager %}
+        <div class="card border-primary shadow-sm mt-3">
+            <div class="card-header bg-primary-subtle border-primary">
+                <h6 class="mb-0 fw-bold">Khu vuc danh rieng cho Can bo</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    <strong>Can bo phu trach hien tai:</strong>
+                    {% if permit.assigned_reviewer %}
+                        {% firstof permit.assigned_reviewer.get_full_name permit.assigned_reviewer.username %}
+                    {% else %}
+                        Chua co
+                    {% endif %}
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if permit.status == 'submitted' %}
+                        <form method="post"
+                              action="{% url 'permits:process' permit.pk %}"
+                              class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="receive" />
+                            <button type="submit" class="btn btn-info text-white">
+                                <i class="bi bi-inbox-fill me-1"></i>Tiep nhan ho so
+                            </button>
+                        </form>
+                    {% endif %}
+                    {% if permit.status == 'reviewing' %}
+                        <form method="post"
+                              action="{% url 'permits:process' permit.pk %}"
+                              class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="approve" />
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle-fill me-1"></i>Dong y Cap phep
+                            </button>
+                        </form>
+                        <form method="post"
+                              action="{% url 'permits:process' permit.pk %}"
+                              class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reject" />
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-x-circle-fill me-1"></i>Tu choi Cap phep
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
 {% endblock %}
