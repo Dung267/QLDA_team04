@@ -1,0 +1,13 @@
+# Context
+Bạn là một chuyên gia Django. Dự án này là Hệ thống quản lý hạ tầng đô thị.
+Yêu cầu code tập trung vào tính hoàn thiện, dễ đọc, phù hợp với quy mô đồ án môn học, không over-engineering.
+
+# Frontend Guidelines
+- Luôn sử dụng Bootstrap 5 cho UI.
+- Sử dụng Bootstrap Icons cho các biểu tượng.
+- Sử dụng Django Template Tags chuẩn mực.
+- Giao diện cần responsive cơ bản (Mobile & Desktop).
+
+# Backend Guidelines
+- Luôn bao gồm {% csrf_token %} trong các form POST.
+- Xử lý lỗi gọn gàng, hiển thị message rõ ràng cho người dùng.

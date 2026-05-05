@@ -1,31 +1,195 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Assignment Form" }}</h4>
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'hr:assignment_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-briefcase-fill text-primary me-2"></i>
+    {% if object %}Cập nhật công việc{% else %}Giao việc mới{% endif %}
+  </h4>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Assignment Form</div></div>
-{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {# IDNhanVien – FK NhanVien #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Nhân viên thực hiện <span class="text-danger">*</span>
+            </label>
+            <select name="employee" id="sel-employee"
+                    class="form-select {% if form.employee.errors %}is-invalid{% endif %}" required>
+              <option value="">-- Chọn nhân viên --</option>
+              {% for nv in employee_list %}
+              <option value="{{ nv.pk }}"
+                      data-dept="{{ nv.department.name|default:'' }}"
+                      data-load="{{ nv.active_tasks_count|default:0 }}"
+                      {% if form.employee.value == nv.pk|stringformat:'s' %}selected
+                      {% elif not form.employee.value and preselected_employee == nv.pk|stringformat:'s' %}selected{% endif %}>
+                {{ nv.user.get_full_name }} – {{ nv.department.name|default:"?" }}
+              </option>
+              {% endfor %}
+            </select>
+            <div id="employee-hint" class="form-text text-muted mt-1"></div>
+            {% if form.employee.errors %}<div class="invalid-feedback">{{ form.employee.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# title – DB field varchar(200) #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Tiêu đề công việc <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="title"
+                   class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                   value="{{ form.title.value|default:'' }}"
+                   placeholder="VD: Kiểm tra đèn giao thông tuyến Trần Phú"
+                   maxlength="200" required>
+            {% if form.title.errors %}<div class="invalid-feedback">{{ form.title.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# description – DB field text #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Mô tả chi tiết</label>
+            <textarea name="description" rows="4" class="form-control"
+                      placeholder="Nội dung, yêu cầu cụ thể, ghi chú hiện trường...">{{ form.description.value|default:'' }}</textarea>
+          </div>
+
+          <div class="row g-3 mb-3">
+            {# due_date – DB field date #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Hạn hoàn thành</label>
+              <input type="date" name="due_date"
+                     class="form-control {% if form.due_date.errors %}is-invalid{% endif %}"
+                     value="{{ form.due_date.value|default:'' }}">
+              {% if form.due_date.errors %}<div class="invalid-feedback">{{ form.due_date.errors.0 }}</div>{% endif %}
+            </div>
+
+            {# status – model choices: todo / in_progress / done / cancelled #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Trạng thái</label>
+              <select name="status" class="form-select">
+                <option value="todo"        {% if form.status.value == 'todo' or not form.status.value %}selected{% endif %}>⏳ Chưa làm</option>
+                <option value="in_progress" {% if form.status.value == 'in_progress' %}selected{% endif %}>🔄 Đang thực hiện</option>
+                <option value="done"        {% if form.status.value == 'done' %}selected{% endif %}>✅ Hoàn thành</option>
+                <option value="cancelled"   {% if form.status.value == 'cancelled' %}selected{% endif %}>🚫 Hủy</option>
+              </select>
+            </div>
+          </div>
+
+          {# completion_note – hiện khi status = done #}
+          <div class="mb-4" id="completion-note-wrap"
+               style="{% if form.status.value == 'done' %}display:block{% else %}display:none{% endif %}">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-check-circle text-success me-1"></i>Ghi chú hoàn thành
+            </label>
+            <textarea name="completion_note" rows="3" class="form-control"
+                      placeholder="Kết quả thực hiện, vấn đề phát sinh, đề xuất...">{{ form.completion_note.value|default:'' }}</textarea>
+          </div>
+
+          {# Gửi thông báo #}
+          <div class="form-check mb-4">
+            <input class="form-check-input" type="checkbox" name="send_notification"
+                   id="chk-notify" {% if not object %}checked{% endif %}>
+            <label class="form-check-label small" for="chk-notify">
+              <i class="bi bi-bell text-primary me-1"></i>
+              Gửi thông báo đến nhân viên được giao việc
+            </label>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{% url 'hr:assignment_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x me-1"></i>Hủy
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-1"></i>
+              {% if object %}Cập nhật{% else %}Giao việc{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    {# Preview nhân viên được chọn #}
+    <div class="card border-0 shadow-sm mb-3" id="employee-card" style="display:none">
+      <div class="card-body">
+        <div class="small fw-semibold text-muted mb-2">Nhân viên được chọn</div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold
+                      d-flex align-items-center justify-content-center"
+               style="width:48px;height:48px;font-size:1.1rem" id="emp-avatar">?</div>
+          <div>
+            <div class="fw-semibold" id="emp-name">—</div>
+            <div class="text-muted small" id="emp-dept">—</div>
+            <div class="mt-1" id="emp-load"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Hướng dẫn</h6>
+        <ul class="list-unstyled small text-muted mb-0">
+          <li class="mb-2"><i class="bi bi-1-circle text-primary me-2"></i>Chọn nhân viên phù hợp với khu vực và chuyên môn</li>
+          <li class="mb-2"><i class="bi bi-2-circle text-primary me-2"></i>Đặt hạn hoàn thành rõ ràng để nhân viên lên kế hoạch</li>
+          <li class="mb-2"><i class="bi bi-3-circle text-primary me-2"></i>Nhân viên có thể tự cập nhật tiến độ và ghi chú khi hoàn thành</li>
+          <li><i class="bi bi-4-circle text-primary me-2"></i>Bật thông báo để nhân viên nhận lệnh ngay lập tức</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const sel = document.getElementById('sel-employee');
+const card = document.getElementById('employee-card');
+const hint = document.getElementById('employee-hint');
+
+// Employee data from option tags
+function updateEmployeeCard() {
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) { card.style.display = 'none'; hint.textContent = ''; return; }
+
+  const name = opt.text.split(' – ')[0];
+  const dept = opt.dataset.dept || '—';
+  const load = parseInt(opt.dataset.load) || 0;
+
+  card.style.display = '';
+  document.getElementById('emp-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('emp-name').textContent = name;
+  document.getElementById('emp-dept').textContent = dept;
+
+  const loadEl = document.getElementById('emp-load');
+  if (load === 0) {
+    loadEl.innerHTML = '<span class="badge bg-success">Rảnh – sẵn sàng nhận việc</span>';
+  } else if (load <= 2) {
+    loadEl.innerHTML = `<span class="badge bg-warning text-dark">${load} việc đang làm</span>`;
+  } else {
+    loadEl.innerHTML = `<span class="badge bg-danger">${load} việc – đang bận</span>`;
+    hint.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i>Nhân viên này đang có nhiều việc, cân nhắc chọn người khác.';
+  }
+  if (load <= 2) hint.textContent = '';
+}
+
+sel.addEventListener('change', updateEmployeeCard);
+updateEmployeeCard();
+
+// Show/hide completion_note based on status
+const statusSel = document.querySelector('[name="status"]');
+const noteWrap  = document.getElementById('completion-note-wrap');
+function toggleNote() {
+  noteWrap.style.display = statusSel.value === 'done' ? '' : 'none';
+}
+statusSel.addEventListener('change', toggleNote);
+toggleNote();
+</script>
 {% endblock %}

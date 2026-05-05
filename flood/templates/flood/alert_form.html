@@ -1,31 +1,321 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Alert Form" }}</h4>
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'flood:alert_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>{{ page_title }}
+  </h4>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Alert Form</div></div>
+
+{% if messages %}
+<div class="mb-3">
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show py-2" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+</div>
 {% endif %}
+
+<div class="row g-4">
+  {# ── Form chính ── #}
+  <div class="col-lg-8">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {# ── Bước 1: Thông tin cơ bản ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-danger rounded-pill me-2">1</span>Thông tin cảnh báo
+        </div>
+        <div class="card-body">
+
+          {# title – DB varchar(200), Bắt buộc #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Tiêu đề cảnh báo <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="title" maxlength="200"
+                   class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                   value="{{ form.title.value|default:'' }}"
+                   placeholder="VD: Ngập lụt nghiêm trọng khu vực Hải Châu" required>
+            {% for err in form.title.errors %}
+            <div class="invalid-feedback">{{ err }}</div>{% endfor %}
+          </div>
+
+          {# description – DB text, Bắt buộc #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Mô tả tình huống <span class="text-danger">*</span>
+            </label>
+            <textarea name="description" rows="4"
+                      class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                      placeholder="Diễn biến, nguyên nhân, phạm vi ảnh hưởng..." required>{{ form.description.value|default:'' }}</textarea>
+            {% for err in form.description.errors %}
+            <div class="invalid-feedback">{{ err }}</div>{% endfor %}
+          </div>
+
+          {# level – DB varchar(2): 1/2/3/4, Bắt buộc – radio button card #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Cấp độ nguy hiểm <span class="text-danger">*</span>
+            </label>
+            <div class="row g-2">
+              {% for val, label in form.fields.level.choices %}
+              <div class="col-6 col-md-3">
+                <input type="radio" class="btn-check" name="level"
+                       id="lv{{ val }}" value="{{ val }}"
+                       {% if form.level.value == val %}checked{% endif %} required>
+                <label class="btn btn-outline-{% if val == '4' %}danger{% elif val == '3' %}warning{% elif val == '2' %}info{% else %}secondary{% endif %} w-100" for="lv{{ val }}">
+                  {% if val == '4' %}🚨{% elif val == '3' %}⚠️{% elif val == '2' %}🔷{% else %}🔹{% endif %}
+                  {{ label }}<br>
+                  <small class="fw-normal">
+                    {% if val == '4' %}Thảm họa
+                    {% elif val == '3' %}Rất nguy hiểm
+                    {% elif val == '2' %}Nguy hiểm
+                    {% else %}Theo dõi{% endif %}
+                  </small>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            {% for err in form.level.errors %}
+            <div class="text-danger small mt-1">{{ err }}</div>{% endfor %}
+          </div>
+
+        </div>
+      </div>
+
+      {# ── Bước 2: Vị trí ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-danger rounded-pill me-2">2</span>Vị trí khu vực
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            {# area_type – DB varchar(10), Bắt buộc #}
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">
+                Loại khu vực <span class="text-danger">*</span>
+              </label>
+              <select name="area_type"
+                      class="form-select {% if form.area_type.errors %}is-invalid{% endif %}" required>
+                <option value="">-- Chọn loại --</option>
+                {% for val, lbl in form.fields.area_type.choices %}
+                <option value="{{ val }}"
+                  {% if form.area_type.value == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+              </select>
+              {% for err in form.area_type.errors %}
+              <div class="invalid-feedback">{{ err }}</div>{% endfor %}
+            </div>
+
+            {# area_name – DB varchar(200), Bắt buộc #}
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">
+                Tên khu vực <span class="text-danger">*</span>
+              </label>
+              <input type="text" name="area_name" maxlength="200"
+                     class="form-control {% if form.area_name.errors %}is-invalid{% endif %}"
+                     value="{{ form.area_name.value|default:'' }}"
+                     placeholder="VD: Phường Hải Châu 1, Quận Hải Châu" required>
+              {% for err in form.area_name.errors %}
+              <div class="invalid-feedback">{{ err }}</div>{% endfor %}
+            </div>
+
+            {# latitude – DB float, Bắt buộc #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                Vĩ độ (Latitude) <span class="text-danger">*</span>
+              </label>
+              <input type="number" name="latitude" step="0.000001" min="-90" max="90"
+                     class="form-control {% if form.latitude.errors %}is-invalid{% endif %}"
+                     value="{{ form.latitude.value|default:'' }}" placeholder="16.047079" required>
+              {% for err in form.latitude.errors %}
+              <div class="invalid-feedback">{{ err }}</div>{% endfor %}
+            </div>
+
+            {# longitude – DB float, Bắt buộc #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                Kinh độ (Longitude) <span class="text-danger">*</span>
+              </label>
+              <input type="number" name="longitude" step="0.000001" min="-180" max="180"
+                     class="form-control {% if form.longitude.errors %}is-invalid{% endif %}"
+                     value="{{ form.longitude.value|default:'' }}" placeholder="108.206230" required>
+              {% for err in form.longitude.errors %}
+              <div class="invalid-feedback">{{ err }}</div>{% endfor %}
+            </div>
+
+            {# water_level_cm – DB int, Bắt buộc #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                Mực nước ngập (cm) <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <input type="number" name="water_level_cm" min="0" max="999"
+                       class="form-control {% if form.water_level_cm.errors %}is-invalid{% endif %}"
+                       value="{{ form.water_level_cm.value|default:'' }}" placeholder="50" required>
+                <span class="input-group-text">cm</span>
+                {% for err in form.water_level_cm.errors %}
+                <div class="invalid-feedback">{{ err }}</div>{% endfor %}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {# ── Bước 3: Hướng dẫn ứng phó ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-danger rounded-pill me-2">3</span>Hướng dẫn ứng phó
+        </div>
+        <div class="card-body">
+
+          {# safe_routes – DB text #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-signpost-2 text-success me-1"></i>Tuyến đường an toàn
+            </label>
+            <textarea name="safe_routes" rows="3" class="form-control"
+                      placeholder="Liệt kê các tuyến đường có thể di chuyển an toàn...">{{ form.safe_routes.value|default:'' }}</textarea>
+          </div>
+
+          {# evacuation_info – DB text #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-person-walking text-warning me-1"></i>Thông tin sơ tán
+            </label>
+            <textarea name="evacuation_info" rows="3" class="form-control"
+                      placeholder="Hướng dẫn di chuyển, tránh các khu vực nguy hiểm...">{{ form.evacuation_info.value|default:'' }}</textarea>
+          </div>
+
+          {# shelter_locations – DB text #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              <i class="bi bi-house-check text-primary me-1"></i>Địa điểm trú ẩn
+            </label>
+            <textarea name="shelter_locations" rows="3" class="form-control"
+                      placeholder="Các trường học, nhà văn hóa, điểm tập kết an toàn...">{{ form.shelter_locations.value|default:'' }}</textarea>
+          </div>
+
+        </div>
+      </div>
+
+      {# ── Bước 4: Thông báo ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-danger rounded-pill me-2">4</span>Kênh thông báo
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            {# is_active – DB bit #}
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="is_active" id="chk-active"
+                       {% if form.is_active.value %}checked{% endif %}>
+                <label class="form-check-label fw-semibold" for="chk-active">
+                  <i class="bi bi-broadcast text-primary me-1"></i>Cảnh báo đang hoạt động
+                </label>
+              </div>
+            </div>
+
+            {# is_sent_sms – DB bit #}
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="is_sent_sms" id="chk-sms"
+                       {% if form.is_sent_sms.value %}checked{% endif %}>
+                <label class="form-check-label fw-semibold" for="chk-sms">
+                  <i class="bi bi-phone text-warning me-1"></i>Đã gửi SMS
+                </label>
+              </div>
+              <div class="text-muted small mt-1 ms-4">
+                Gửi tin cảnh báo tới số điện thoại đã đăng ký
+              </div>
+            </div>
+
+            {# rescue_teams_notified – DB bit #}
+            <div class="col-md-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="rescue_teams_notified" id="chk-rescue"
+                       {% if form.rescue_teams_notified.value %}checked{% endif %}>
+                <label class="form-check-label fw-semibold" for="chk-rescue">
+                  <i class="bi bi-people text-danger me-1"></i>Đã báo đội cứu hộ
+                </label>
+              </div>
+              <div class="text-muted small mt-1 ms-4">
+                Tự động gửi thông báo đến các đội cứu hộ
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{% if object %}{% url 'flood:alert_detail' object.pk %}{% else %}{% url 'flood:alert_list' %}{% endif %}"
+           class="btn btn-outline-secondary">
+          <i class="bi bi-x me-1"></i>Hủy
+        </a>
+        <button type="submit" class="btn btn-danger">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          {% if object %}Cập nhật cảnh báo{% else %}Phát lệnh cảnh báo{% endif %}
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  {# ── Sidebar hướng dẫn ── #}
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm border-start border-4 border-danger mb-3">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3 text-danger">
+          <i class="bi bi-shield-exclamation me-2"></i>Quy trình phát lệnh
+        </h6>
+        <ol class="list-group list-group-numbered list-group-flush small">
+          <li class="list-group-item border-0 px-0 py-1">Xác nhận thông tin từ đài khí tượng</li>
+          <li class="list-group-item border-0 px-0 py-1">Đánh giá cấp độ và phạm vi ảnh hưởng</li>
+          <li class="list-group-item border-0 px-0 py-1">Phát lệnh và kích hoạt thông báo</li>
+          <li class="list-group-item border-0 px-0 py-1">Điều phối đội cứu hộ đến hiện trường</li>
+          <li class="list-group-item border-0 px-0 py-1">Cập nhật tình hình liên tục</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-info-circle text-primary me-2"></i>Định nghĩa cấp độ
+        </h6>
+        <div class="small">
+          <div class="d-flex gap-2 mb-2">
+            <span class="badge bg-secondary flex-shrink-0">Cấp 1</span>
+            <span class="text-muted">0–30 cm, theo dõi thêm</span>
+          </div>
+          <div class="d-flex gap-2 mb-2">
+            <span class="badge bg-info text-dark flex-shrink-0">Cấp 2</span>
+            <span class="text-muted">30–60 cm, hạn chế di chuyển</span>
+          </div>
+          <div class="d-flex gap-2 mb-2">
+            <span class="badge bg-warning text-dark flex-shrink-0">Cấp 3</span>
+            <span class="text-muted">60–100 cm, sơ tán người dân</span>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="badge bg-danger flex-shrink-0">Cấp 4</span>
+            <span class="text-muted">&gt;100 cm, thảm họa, báo động toàn thành</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

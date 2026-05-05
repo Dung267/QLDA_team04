@@ -1,31 +1,312 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Alert Detail" }}</h4>
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'flood:alert_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h4 class="fw-bold mb-0">{{ alert.title }}</h4>
+    <div class="text-muted small">
+      Tạo bởi {{ alert.created_by.get_full_name|default:alert.created_by.username }}
+      lúc {{ alert.created_at|date:"d/m/Y H:i" }}
+    </div>
+  </div>
+  {% if user.is_staff_member and alert.is_active %}
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'flood:alert_edit' alert.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Cập nhật
+    </a>
+    <form method="post" action="{% url 'flood:alert_resolve' alert.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success btn-sm"
+              onclick="return confirm('Xác nhận đã giải quyết cảnh báo này?')">
+        <i class="bi bi-check-circle me-1"></i>Đánh dấu giải quyết
+      </button>
+    </form>
+  </div>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Alert Detail</div></div>
-{% endif %}
+
+{# ── Severity banner ── #}
+<div class="alert border-0 mb-4
+  {% if alert.level == '4' %}alert-danger
+  {% elif alert.level == '3' %}alert-warning
+  {% elif alert.level == '2' %}alert-info
+  {% else %}alert-secondary{% endif %}">
+  <div class="d-flex align-items-center gap-3">
+    <div class="display-5">
+      {% if alert.level == '4' %}🚨{% elif alert.level == '3' %}⚠️{% elif alert.level == '2' %}🔷{% else %}🔹{% endif %}
+    </div>
+    <div>
+      <div class="fw-bold fs-5">
+        Cấp độ {{ alert.level }} –
+        {% if alert.level == '4' %}Thảm họa – Nguy hiểm cực cao
+        {% elif alert.level == '3' %}Rất nguy hiểm
+        {% elif alert.level == '2' %}Nguy hiểm
+        {% else %}Ít nguy hiểm – Theo dõi
+        {% endif %}
+      </div>
+      <div>
+        Khu vực: <strong>{{ alert.area_name }}</strong>
+        ({{ alert.get_area_type_display }}) ·
+        Mực nước: <strong class="text-danger">{{ alert.water_level_cm }} cm</strong>
+      </div>
+    </div>
+    <div class="ms-auto text-end">
+      {% if alert.is_active %}
+        <span class="badge bg-danger fs-6 px-3 py-2">🔴 Đang hoạt động</span>
+      {% else %}
+        <span class="badge bg-success fs-6 px-3 py-2">✅ Đã giải quyết</span>
+        {% if alert.resolved_at %}
+        <div class="small text-muted mt-1">{{ alert.resolved_at|date:"d/m/Y H:i" }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  {# ── Left column ── #}
+  <div class="col-lg-8">
+
+    {# Mô tả #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-file-text text-primary me-2"></i>Mô tả tình huống
+      </div>
+      <div class="card-body">
+        <p class="mb-0">{{ alert.description }}</p>
+      </div>
+    </div>
+
+    {# Bản đồ #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-bold py-3 d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-map text-danger me-2"></i>Vị trí trên bản đồ</span>
+        <small class="text-muted">{{ alert.latitude }}, {{ alert.longitude }}</small>
+      </div>
+      <div class="card-body p-0" style="height:320px;border-radius:0 0 .5rem .5rem;overflow:hidden">
+        <div id="flood-map" style="height:100%;width:100%"></div>
+      </div>
+    </div>
+
+    {# Tuyến đường an toàn #}
+    {% if alert.safe_routes %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-signpost-2 text-success me-2"></i>Tuyến đường an toàn
+      </div>
+      <div class="card-body">
+        <div style="white-space:pre-line">{{ alert.safe_routes }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Thông tin sơ tán #}
+    {% if alert.evacuation_info %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-person-walking text-warning me-2"></i>Thông tin sơ tán
+      </div>
+      <div class="card-body">
+        <div style="white-space:pre-line">{{ alert.evacuation_info }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Lịch sử cập nhật #}
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-bold py-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history text-info me-2"></i>Lịch sử cập nhật</span>
+        {% if user.is_staff_member %}
+        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalAddUpdate">
+          <i class="bi bi-plus me-1"></i>Thêm cập nhật
+        </button>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if updates %}
+        <div class="ps-4 ms-2 position-relative py-3">
+          <div class="position-absolute top-0 start-0 h-100 border-start border-2 ms-1"></div>
+          {% for upd in updates %}
+          <div class="position-relative mb-3">
+            <div class="position-absolute start-0 bg-primary rounded-circle"
+                 style="width:10px;height:10px;margin-left:-5px;top:8px"></div>
+            <div class="card border-0 bg-light ms-3">
+              <div class="card-body py-2 px-3">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div class="small fw-semibold">
+                    {{ upd.created_by.get_full_name|default:upd.created_by.username }}
+                  </div>
+                  <small class="text-muted">{{ upd.created_at|date:"d/m/Y H:i" }}</small>
+                </div>
+                <p class="mb-0 small mt-1">{{ upd.content }}</p>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 small">
+          <i class="bi bi-clock d-block mb-1 opacity-50"></i>Chưa có cập nhật nào
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>{# /col-lg-8 #}
+
+  {# ── Right sidebar ── #}
+  <div class="col-lg-4">
+
+    {# Địa điểm trú ẩn #}
+    {% if alert.shelter_locations %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-house-check text-primary me-2"></i>Địa điểm trú ẩn
+      </div>
+      <div class="card-body">
+        <div class="small" style="white-space:pre-line">{{ alert.shelter_locations }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Trạng thái thông báo #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-bell text-warning me-2"></i>Trạng thái thông báo
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush" style="font-size:.88rem">
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-phone me-2 text-muted"></i>Gửi SMS</span>
+            {% if alert.is_sent_sms %}
+              <span class="badge bg-success">Đã gửi</span>
+            {% else %}
+              <span class="badge bg-light text-muted border">Chưa gửi</span>
+            {% endif %}
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-people me-2 text-muted"></i>Đội cứu hộ</span>
+            {% if alert.rescue_teams_notified %}
+              <span class="badge bg-success">Đã thông báo</span>
+            {% else %}
+              <span class="badge bg-light text-muted border">Chưa thông báo</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if user.is_staff_member and alert.is_active %}
+        <div class="p-3 d-grid gap-2">
+          {% if not alert.is_sent_sms %}
+          <form method="post" action="{% url 'flood:send_sms' alert.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning btn-sm w-100">
+              <i class="bi bi-phone me-1"></i>Gửi SMS cảnh báo
+            </button>
+          </form>
+          {% endif %}
+          {% if not alert.rescue_teams_notified %}
+          <form method="post" action="{% url 'flood:notify_rescue' alert.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm w-100">
+              <i class="bi bi-people me-1"></i>Báo đội cứu hộ
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Thông tin kỹ thuật #}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3 small text-muted text-uppercase">Thông tin kỹ thuật</h6>
+        <dl class="row row-cols-2 mb-0" style="font-size:.82rem">
+          <dt class="col text-muted fw-normal">ID cảnh báo</dt>
+          <dd class="col"><code>#{{ alert.pk }}</code></dd>
+          <dt class="col text-muted fw-normal">Vĩ độ</dt>
+          <dd class="col">{{ alert.latitude }}</dd>
+          <dt class="col text-muted fw-normal">Kinh độ</dt>
+          <dd class="col">{{ alert.longitude }}</dd>
+          <dt class="col text-muted fw-normal">Ngày tạo</dt>
+          <dd class="col">{{ alert.created_at|date:"d/m/Y H:i" }}</dd>
+          <dt class="col text-muted fw-normal">Cập nhật</dt>
+          <dd class="col">{{ alert.updated_at|date:"d/m/Y H:i" }}</dd>
+        </dl>
+      </div>
+    </div>
+
+  </div>{# /col-lg-4 #}
+</div>
+
+{# ── Modal: Thêm cập nhật tình hình ── #}
+<div class="modal fade" id="modalAddUpdate" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'flood:add_update' alert.pk %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-plus-circle text-primary me-2"></i>Thêm cập nhật tình hình
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label fw-semibold">
+            Nội dung cập nhật <span class="text-danger">*</span>
+          </label>
+          <textarea name="content" rows="5" class="form-control"
+                    placeholder="Mô tả tình hình hiện tại, diễn biến mới nhất..."
+                    required></textarea>
+          <div class="form-text text-muted mt-1">
+            Thông tin sẽ được hiển thị theo thứ tự thời gian trên trang chi tiết.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-send me-1"></i>Lưu cập nhật
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Leaflet map ── #}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  const lat   = Number("{{ alert.latitude|default:'16.047079' }}");
+  const lng   = Number("{{ alert.longitude|default:'108.206230' }}");
+  const level = "{{ alert.level }}";
+
+  const colorMap = { '4': '#dc3545', '3': '#fd7e14', '2': '#0dcaf0', '1': '#6c757d' };
+  const radMap   = { '4': 1000,      '3': 700,       '2': 500,       '1': 300 };
+  const color    = colorMap[level] || '#6c757d';
+  const radius   = radMap[level]   || 300;
+
+  const map = L.map('flood-map').setView([lat, lng], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  L.circle([lat, lng], {
+    color, fillColor: color, fillOpacity: 0.2, radius
+  }).addTo(map);
+
+  L.marker([lat, lng]).addTo(map)
+    .bindPopup(
+      '<b>{{ alert.title|escapejs }}</b><br>' +
+      'Khu vực: {{ alert.area_name|escapejs }}<br>' +
+      'Mực nước: {{ alert.water_level_cm }} cm'
+    )
+    .openPopup();
+})();
+</script>
 {% endblock %}

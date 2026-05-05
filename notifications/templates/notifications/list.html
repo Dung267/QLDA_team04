@@ -1,31 +1,252 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"List" }}</h4>
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-bell-fill text-primary me-2"></i>Thông báo
+    {% if unread_count %}
+    <span class="badge bg-danger rounded-pill ms-1" style="font-size:.65rem;vertical-align:middle">{{ unread_count }}</span>
+    {% endif %}
+  </h4>
+  <div class="d-flex gap-2">
+    {% if unread_count %}
+    <form method="post" action="{% url 'notifications:mark_all_read' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
+      </button>
+    </form>
+    {% endif %}
+    <form method="post" action="{% url 'notifications:clear_all' %}" onsubmit="return confirm('Xóa tất cả thông báo?')">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-trash3 me-1"></i>Xóa tất cả
+      </button>
+    </form>
+  </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang List</div></div>
+
+{# Filter tabs #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <a href="?type=" class="btn btn-sm {% if not request.GET.type %}btn-primary{% else %}btn-outline-secondary' %}{% endif %}">
+        <i class="bi bi-grid me-1"></i>Tất cả
+        <span class="badge bg-white text-dark ms-1">{{ total_count|default:0 }}</span>
+      </a>
+      <a href="?type=maintenance" class="btn btn-sm {% if request.GET.type == 'maintenance' %}btn-warning text-dark{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-tools me-1"></i>Bảo trì
+      </a>
+      <a href="?type=flood" class="btn btn-sm {% if request.GET.type == 'flood' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-droplet me-1"></i>Ngập lụt
+      </a>
+      <a href="?type=system" class="btn btn-sm {% if request.GET.type == 'system' %}btn-info text-dark{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-gear me-1"></i>Hệ thống
+      </a>
+      <a href="?type=permit" class="btn btn-sm {% if request.GET.type == 'permit' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-file-earmark-check me-1"></i>Giấy phép
+      </a>
+      <a href="?type=assignment" class="btn btn-sm {% if request.GET.type == 'assignment' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-person-check me-1"></i>Phân công
+      </a>
+
+      <div class="ms-auto">
+        <select class="form-select form-select-sm" onchange="window.location.href='?'+new URLSearchParams({type:'{{ request.GET.type }}',read:this.value})">
+          <option value="">Tất cả trạng thái</option>
+          <option value="unread" {% if request.GET.read == 'unread' %}selected{% endif %}>Chưa đọc</option>
+          <option value="read"   {% if request.GET.read == 'read' %}selected{% endif %}>Đã đọc</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Timeline #}
+{% if page_obj %}
+<div class="position-relative ps-4 ms-2" id="notif-timeline">
+  {# Vertical line #}
+  <div class="position-absolute top-0 start-0 h-100 border-start border-2 ms-1" style="border-color:#dee2e6!important"></div>
+
+  {% for notif in page_obj %}
+  {# Date separator #}
+  {% ifchanged notif.created_at|date:"d/m/Y" %}
+  <div class="d-flex align-items-center gap-2 mb-3 mt-{% if not forloop.first %}4{% else %}0{% endif %}">
+    <div class="position-absolute start-0 bg-white border rounded-circle d-flex align-items-center justify-content-center"
+         style="width:8px;height:8px;margin-left:-3px;background:white!important;border-color:#dee2e6!important"></div>
+    <span class="badge bg-light text-muted border" style="margin-left:8px;font-size:.75rem">
+      {{ notif.created_at|date:"d/m/Y" }}
+    </span>
+  </div>
+  {% endifchanged %}
+
+  {# Notification item #}
+  <div class="position-relative mb-2" id="notif-{{ notif.pk }}">
+    {# Timeline dot #}
+    <div class="position-absolute start-0 rounded-circle
+      {% if notif.notification_type == 'flood' %}bg-danger
+      {% elif notif.notification_type == 'maintenance' %}bg-warning
+      {% elif notif.notification_type == 'system' %}bg-info
+      {% elif notif.notification_type == 'permit' %}bg-success
+      {% else %}bg-primary{% endif %}"
+      style="width:10px;height:10px;margin-left:-5px;top:18px;{% if not notif.is_read %} box-shadow: 0 0 0 3px rgba(13,110,253,.2);{% endif %}">
+    </div>
+
+    <div class="card border-0 ms-3 {% if not notif.is_read %}shadow{% else %}shadow-sm{% endif %} mb-0
+                {% if not notif.is_read %}border-start border-3
+                {% if notif.notification_type == 'flood' %}border-danger
+                {% elif notif.notification_type == 'maintenance' %}border-warning
+                {% elif notif.notification_type == 'system' %}border-info
+                {% elif notif.notification_type == 'permit' %}border-success
+                {% else %}border-primary{% endif %}{% endif %}"
+         style="{% if notif.is_read %}opacity:.8{% endif %}">
+      <div class="card-body py-3 px-3">
+        <div class="d-flex align-items-start gap-3">
+          {# Icon #}
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0
+            {% if notif.notification_type == 'flood' %}bg-danger bg-opacity-10 text-danger
+            {% elif notif.notification_type == 'maintenance' %}bg-warning bg-opacity-10 text-warning
+            {% elif notif.notification_type == 'system' %}bg-info bg-opacity-10 text-info
+            {% elif notif.notification_type == 'permit' %}bg-success bg-opacity-10 text-success
+            {% else %}bg-primary bg-opacity-10 text-primary{% endif %}"
+               style="width:40px;height:40px">
+            {% if notif.notification_type == 'flood' %}
+              <i class="bi bi-droplet-fill"></i>
+            {% elif notif.notification_type == 'maintenance' %}
+              <i class="bi bi-tools"></i>
+            {% elif notif.notification_type == 'system' %}
+              <i class="bi bi-gear-fill"></i>
+            {% elif notif.notification_type == 'permit' %}
+              <i class="bi bi-file-earmark-check-fill"></i>
+            {% elif notif.notification_type == 'assignment' %}
+              <i class="bi bi-person-check-fill"></i>
+            {% else %}
+              <i class="bi bi-bell-fill"></i>
+            {% endif %}
+          </div>
+
+          {# Content #}
+          <div class="flex-grow-1 min-width-0">
+            <div class="d-flex align-items-start justify-content-between gap-2">
+              <div class="fw-semibold {% if not notif.is_read %}text-dark{% else %}text-muted{% endif %}"
+                   style="font-size:.9rem">
+                {{ notif.title }}
+              </div>
+              <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <small class="text-muted">{{ notif.created_at|timesince }} trước</small>
+                {% if not notif.is_read %}
+                <form method="post" action="{% url 'notifications:mark_read' notif.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-link btn-sm p-0 text-primary" title="Đánh dấu đã đọc">
+                    <i class="bi bi-check2"></i>
+                  </button>
+                </form>
+                {% endif %}
+                <form method="post" action="{% url 'notifications:delete' notif.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-link btn-sm p-0 text-muted" title="Xóa">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+            <p class="mb-1 small text-muted">{{ notif.message }}</p>
+            {% if notif.action_url %}
+            <a href="{{ notif.action_url }}" class="btn btn-sm btn-link p-0 small fw-semibold"
+               onclick="markRead({{ notif.pk }})">
+              {{ notif.action_label|default:"Xem chi tiết" }} <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# Pagination #}
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+  <nav>
+    <ul class="pagination pagination-sm">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.read %}&read={{ request.GET.read }}{% endif %}">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.read %}&read={{ request.GET.read }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.read %}&read={{ request.GET.read }}{% endif %}">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
 {% endif %}
+
+{% else %}
+{# Empty state #}
+<div class="text-center py-5 mt-4">
+  <div class="mb-3">
+    <i class="bi bi-bell-slash display-3 text-muted opacity-50"></i>
+  </div>
+  <h6 class="text-muted">Không có thông báo nào</h6>
+  <p class="text-muted small">Bạn sẽ nhận được thông báo khi có phản ánh mới, cảnh báo ngập lụt, hoặc phân công công việc.</p>
+</div>
+{% endif %}
+
+<script>
+// AJAX mark-read on action link click
+function markRead(pk) {
+  fetch(`/notifications/${pk}/read/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' }
+  });
+}
+
+// Real-time: update unread dot when new notification arrives via WebSocket
+{% if user.is_authenticated %}
+try {
+  const ws = new WebSocket(`ws://${window.location.host}/ws/notifications/`);
+  ws.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    if (data.type === 'notification') {
+      // Show a toast for new notifications
+      showToast(data.title, data.message, data.notification_type);
+    }
+  };
+
+  function showToast(title, msg, type) {
+    const colorMap = { flood:'danger', maintenance:'warning', system:'info', permit:'success' };
+    const color = colorMap[type] || 'primary';
+    const id = 'toast-' + Date.now();
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="${id}" class="toast align-items-center text-bg-${color} border-0 position-fixed bottom-0 end-0 m-3 show"
+           role="alert" style="z-index:9999;min-width:300px">
+        <div class="d-flex">
+          <div class="toast-body">
+            <strong>${title}</strong><br><small>${msg}</small>
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="document.getElementById('${id}').remove()"></button>
+        </div>
+      </div>`);
+    setTimeout(() => { const el = document.getElementById(id); if(el) el.remove(); }, 6000);
+  }
+} catch(e) {}
+{% endif %}
+</script>
 {% endblock %}

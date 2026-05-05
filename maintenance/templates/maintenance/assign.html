@@ -1,31 +1,271 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Assign" }}</h4>
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'maintenance:request_detail' req.pk %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h4 class="fw-bold mb-0">
+      <i class="bi bi-person-check-fill text-primary me-2"></i>Phân công xử lý sự cố
+    </h4>
+    <small class="text-muted">Phản ánh #{{ req.pk }} — {{ req.title|truncatechars:60 }}</small>
+  </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Assign</div></div>
-{% endif %}
+
+<div class="row g-4">
+
+  {# ── Thông tin sự cố ── #}
+  <div class="col-12">
+    <div class="card border-0 shadow-sm border-start border-4
+      {% if req.priority == 'urgent' %}border-danger
+      {% elif req.priority == 'high' %}border-warning
+      {% elif req.priority == 'medium' %}border-info
+      {% else %}border-secondary{% endif %}">
+      <div class="card-body py-3">
+        <div class="row align-items-center g-2">
+          <div class="col-md-5">
+            <div class="d-flex gap-2 mb-1">
+              <span class="badge
+                {% if req.priority == 'urgent' %}bg-danger
+                {% elif req.priority == 'high' %}bg-warning text-dark
+                {% elif req.priority == 'medium' %}bg-info
+                {% else %}bg-secondary{% endif %}">
+                {{ req.get_priority_display }}
+              </span>
+              <span class="badge
+                {% if req.status == 'pending' %}bg-warning text-dark
+                {% elif req.status == 'received' %}bg-info
+                {% else %}bg-secondary{% endif %}">
+                {{ req.get_status_display }}
+              </span>
+            </div>
+            <div class="fw-bold">{{ req.title }}</div>
+            <small class="text-muted">
+              <i class="bi bi-geo-alt me-1"></i>{{ req.address|default:"Chưa có địa chỉ" }}
+            </small>
+          </div>
+          <div class="col-md-3">
+            <div class="small text-muted">Loại sự cố</div>
+            <div class="fw-semibold">{{ req.get_incident_type_display }}</div>
+          </div>
+          <div class="col-md-2">
+            <div class="small text-muted">Ngày gửi</div>
+            <div class="fw-semibold">{{ req.created_at|date:"d/m/Y" }}</div>
+          </div>
+          <div class="col-md-2">
+            <div class="small text-muted">Người báo</div>
+            <div class="fw-semibold">
+              {% if req.is_anonymous %}Ẩn danh{% else %}{{ req.reported_by.get_full_name|default:"—" }}{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Form phân công ── #}
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-people me-2 text-primary"></i>Chọn nhân viên xử lý
+      </div>
+      <div class="card-body p-0">
+        <form method="post" action="{% url 'maintenance:request_assign' req.pk %}">
+          {% csrf_token %}
+
+          {# Tìm kiếm #}
+          <div class="p-3 border-bottom">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-transparent border-end-0">
+                <i class="bi bi-search text-muted"></i>
+              </span>
+              <input type="text" id="staff-search" class="form-control border-start-0"
+                     placeholder="Tìm theo tên nhân viên..." oninput="filterStaff(this.value)">
+            </div>
+          </div>
+
+          {# Danh sách nhân viên — dùng staff_list từ views.py #}
+          <div style="max-height:400px; overflow-y:auto;">
+            <div id="staff-list">
+              {% for staff in staff_list %}
+              <label class="staff-item d-flex align-items-center gap-3 px-3 py-3 border-bottom"
+                     data-name="{{ staff.get_full_name|lower }} {{ staff.username|lower }}"
+                     style="cursor:pointer; transition:background .15s; margin:0;">
+                {# POST field là user_id theo views.py #}
+                <input type="radio" name="user_id" value="{{ staff.pk }}"
+                       class="form-check-input mt-0 flex-shrink-0"
+                       {% if req.assigned_to_id == staff.pk %}checked{% endif %}
+                       style="width:18px; height:18px;">
+
+                {# Avatar chữ cái #}
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold
+                            d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:42px; height:42px; font-size:.9rem;">
+                  {{ staff.get_full_name|first|upper|default:staff.username|first|upper }}
+                </div>
+
+                <div class="flex-grow-1" style="min-width:0;">
+                  <div class="fw-semibold text-truncate">
+                    {{ staff.get_full_name|default:staff.username }}
+                  </div>
+                  <div class="small text-muted">
+                    <i class="bi bi-person-badge me-1"></i>{{ staff.get_role_display|default:staff.role }}
+                    {% if staff.email %}
+                      · <i class="bi bi-envelope me-1"></i>{{ staff.email }}
+                    {% endif %}
+                  </div>
+                </div>
+
+                {# Badge trạng thái - dựa trên số việc đang assigned #}
+                <div class="text-end flex-shrink-0">
+                  {% with staff.assigned_requests.filter as filter_fn %}
+                  {% endwith %}
+                  <span class="badge bg-success">Khả dụng</span>
+                </div>
+              </label>
+              {% empty %}
+              <div class="text-center text-muted py-5">
+                <i class="bi bi-person-x display-5 d-block mb-2 opacity-40"></i>
+                <div class="small">Không có nhân viên nào</div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          {# Nút submit #}
+          <div class="d-flex justify-content-between align-items-center gap-2 px-3 py-3 border-top">
+            <a href="{% url 'maintenance:request_detail' req.pk %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x me-1"></i>Hủy
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-person-check me-1"></i>Xác nhận phân công
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# ── Sidebar thông tin ── #}
+  <div class="col-lg-5">
+
+    {# Người xử lý hiện tại #}
+    {% if req.assigned_to %}
+    <div class="card border-0 shadow-sm mb-3 border-start border-3 border-success">
+      <div class="card-body">
+        <div class="small text-muted fw-semibold mb-2 text-uppercase" style="letter-spacing:.05em">
+          Đang phân công cho
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle bg-success bg-opacity-10 text-success fw-bold
+                      d-flex align-items-center justify-content-center"
+               style="width:46px; height:46px; font-size:.95rem;">
+            {{ req.assigned_to.get_full_name|first|upper }}
+          </div>
+          <div>
+            <div class="fw-semibold">{{ req.assigned_to.get_full_name|default:req.assigned_to.username }}</div>
+            <div class="small text-muted">{{ req.assigned_to.get_role_display|default:req.assigned_to.role }}</div>
+            {% if req.assigned_at %}
+            <div class="small text-muted">
+              Phân công lúc {{ req.assigned_at|date:"d/m/Y H:i" }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Thông tin sự cố chi tiết #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-transparent fw-bold py-3 small">
+        <i class="bi bi-info-circle me-2 text-info"></i>Chi tiết sự cố
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          {% if req.road %}
+          <dt class="col-5 text-muted fw-normal">Tuyến đường</dt>
+          <dd class="col-7 fw-semibold mb-2">{{ req.road.name }}</dd>
+          {% endif %}
+          {% if req.infrastructure %}
+          <dt class="col-5 text-muted fw-normal">Hạ tầng</dt>
+          <dd class="col-7 fw-semibold mb-2">{{ req.infrastructure.name }}</dd>
+          {% endif %}
+          {% if req.estimated_cost %}
+          <dt class="col-5 text-muted fw-normal">Chi phí DK</dt>
+          <dd class="col-7 fw-semibold mb-2">{{ req.estimated_cost|floatformat:0 }} ₫</dd>
+          {% endif %}
+          <dt class="col-5 text-muted fw-normal">Ẩn danh</dt>
+          <dd class="col-7 mb-2">
+            {% if req.is_anonymous %}
+              <span class="badge bg-secondary">Có</span>
+            {% else %}
+              <span class="badge bg-light text-dark border">Không</span>
+            {% endif %}
+          </dd>
+          {% if req.is_duplicate %}
+          <dt class="col-5 text-muted fw-normal">Trùng lặp</dt>
+          <dd class="col-7 mb-2">
+            <span class="badge bg-warning text-dark">Phản ánh #{{ req.duplicate_of_id }}</span>
+          </dd>
+          {% endif %}
+        </dl>
+        {% if req.description %}
+        <hr class="my-2">
+        <div class="small text-muted mb-1">Mô tả sự cố:</div>
+        <p class="small mb-0">{{ req.description|truncatechars:200 }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Hướng dẫn #}
+    <div class="card border-0 shadow-sm bg-light bg-opacity-50">
+      <div class="card-body py-3">
+        <div class="small text-muted">
+          <i class="bi bi-lightbulb text-warning me-1"></i>
+          <strong>Lưu ý:</strong> Sau khi phân công, nhân viên sẽ nhận được thông báo và
+          sự cố chuyển sang trạng thái <span class="badge bg-primary">Đã phân công</span>.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* Hover highlight cho từng dòng nhân viên */
+document.querySelectorAll('.staff-item').forEach(function(el) {
+  var radio = el.querySelector('input[type="radio"]');
+
+  function applyHighlight() {
+    document.querySelectorAll('.staff-item').forEach(function(r) {
+      r.style.background = '';
+    });
+    if (radio && radio.checked) {
+      el.style.background = '#e8f0fe';
+    }
+  }
+
+  el.addEventListener('mouseenter', function() {
+    if (!radio || !radio.checked) el.style.background = '#f8f9ff';
+  });
+  el.addEventListener('mouseleave', function() {
+    if (!radio || !radio.checked) el.style.background = '';
+  });
+  if (radio) {
+    radio.addEventListener('change', applyHighlight);
+    if (radio.checked) el.style.background = '#e8f0fe';
+  }
+});
+
+/* Lọc danh sách nhân viên theo tên */
+function filterStaff(q) {
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('.staff-item').forEach(function(el) {
+    var name = (el.dataset.name || '').toLowerCase();
+    el.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}

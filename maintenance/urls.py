@@ -14,6 +14,7 @@ urlpatterns = [
     path('<int:pk>/progress/', views.request_update_progress, name='request_progress'),
     path('<int:pk>/comment/', views.add_comment, name='add_comment'),
     path('schedules/', views.schedule_list, name='schedule_list'),
-    path('schedules/create/', views.schedule_create, name='schedule_create'),
+    path('schedules/create/', views.ScheduleCreateView.as_view(), name='schedule_create'),
+    path('schedules/<int:pk>/update/', views.ScheduleUpdateView.as_view(), name='schedule_update'),
     path('stats/', views.maintenance_stats, name='stats'),
 ]

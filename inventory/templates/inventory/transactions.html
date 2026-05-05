@@ -1,31 +1,194 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Transactions" }}</h4>
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-arrow-left-right text-primary me-2"></i>Lịch sử giao dịch kho
+  </h4>
+  <a href="{% url 'inventory:add_stock' %}" class="btn btn-success btn-sm">
+    <i class="bi bi-plus me-1"></i>Giao dịch mới
+  </a>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Transactions</div></div>
-{% endif %}
+
+{# Summary #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-success bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-5 text-success">{{ summary.import_count|default:0 }}</div>
+      <div class="small text-muted">Lần nhập kho</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-warning bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-5 text-warning">{{ summary.export_count|default:0 }}</div>
+      <div class="small text-muted">Lần xuất kho</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-primary bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-5 text-primary">{{ summary.total_import_value|floatformat:1 }}M</div>
+      <div class="small text-muted">Tổng nhập (M₫)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-info bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-5 text-info">{{ summary.total_export_value|floatformat:1 }}M</div>
+      <div class="small text-muted">Tổng xuất (M₫)</div>
+    </div>
+  </div>
+</div>
+
+{# Filter #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Vật tư</label>
+        <select name="material" class="form-select form-select-sm">
+          <option value="">Tất cả vật tư</option>
+          {% for mat in material_list %}
+          <option value="{{ mat.pk }}" {% if request.GET.material == mat.pk|stringformat:'s' %}selected{% endif %}>
+            {{ mat.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        {# Gửi 'in'/'out'/'adjust' – khớp trực tiếp với model #}
+        <label class="form-label small fw-semibold text-muted mb-1">Loại GD</label>
+        <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          <option value="in"     {% if request.GET.type == 'in'     %}selected{% endif %}>⬇️ Nhập kho</option>
+          <option value="out"    {% if request.GET.type == 'out'    %}selected{% endif %}>⬆️ Xuất kho</option>
+          <option value="adjust" {% if request.GET.type == 'adjust' %}selected{% endif %}>🔄 Điều chỉnh</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Từ ngày</label>
+        <input type="date" name="date_from" class="form-control form-control-sm"
+               value="{{ request.GET.date_from }}" onchange="this.form.submit()">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Đến ngày</label>
+        <input type="date" name="date_to" class="form-control form-control-sm"
+               value="{{ request.GET.date_to }}" onchange="this.form.submit()">
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary btn-sm me-2">
+          <i class="bi bi-funnel me-1"></i>Lọc
+        </button>
+        <a href="{% url 'inventory:transactions' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-circle me-1"></i>Xóa lọc
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Table #}
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.84rem">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Số hóa đơn</th>
+            <th>Loại</th>
+            <th>Vật tư</th>
+            <th class="text-end">Số lượng</th>
+            <th class="text-end">Đơn giá</th>
+            <th>Người thực hiện</th>
+            <th>Ngày tạo</th>
+            <th>Lý do</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in page_obj %}
+          <tr>
+            <td class="ps-3">
+              <code style="font-size:.75rem">{{ tx.invoice_number|default:"—" }}</code>
+            </td>
+            <td>
+              {% if tx.transaction_type == 'in' %}
+                <span class="badge bg-success">
+                  <i class="bi bi-box-arrow-in-down me-1"></i>Nhập
+                </span>
+              {% elif tx.transaction_type == 'out' %}
+                <span class="badge bg-warning text-dark">
+                  <i class="bi bi-box-arrow-up me-1"></i>Xuất
+                </span>
+              {% else %}
+                <span class="badge bg-secondary">
+                  <i class="bi bi-arrow-repeat me-1"></i>Điều chỉnh
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="fw-semibold">{{ tx.material.name }}</div>
+              <code class="text-muted" style="font-size:.7rem">{{ tx.material.code }}</code>
+            </td>
+            <td class="text-end fw-semibold
+              {% if tx.transaction_type == 'in' %}text-success
+              {% elif tx.transaction_type == 'out' %}text-warning
+              {% else %}text-secondary{% endif %}">
+              {% if tx.transaction_type == 'in' %}+{% elif tx.transaction_type == 'out' %}-{% endif %}{{ tx.quantity }}
+              <span class="text-muted fw-normal">{{ tx.material.get_unit_display }}</span>
+            </td>
+            <td class="text-end text-muted">{{ tx.unit_price|floatformat:0 }} ₫</td>
+            <td class="text-muted small">
+              {{ tx.performed_by.get_full_name|default:"—" }}
+            </td>
+            <td class="text-muted small text-nowrap">
+              {{ tx.created_at|date:"d/m/Y H:i" }}
+            </td>
+            <td class="text-muted small text-truncate" style="max-width:150px"
+                title="{{ tx.reason }}">{{ tx.reason|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-5">
+              <i class="bi bi-archive display-6 d-block mb-2 opacity-50"></i>
+              Không có giao dịch nào
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+      <small class="text-muted">
+        {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ page_obj.paginator.count }} giao dịch
+      </small>
+      <nav><ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">{{ num }}</a>
+          </li>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul></nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

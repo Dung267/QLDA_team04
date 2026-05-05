@@ -3,6 +3,47 @@ from django.contrib.auth.forms import PasswordChangeForm as DjangoPasswordChange
 from .models import User
 
 
+class StaffCreateForm(forms.Form):
+    username = forms.CharField(
+        label='Tên đăng nhập',
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tên đăng nhập'}),
+    )
+    email = forms.EmailField(
+        label='Email',
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
+    )
+    phone = forms.CharField(
+        label='Số điện thoại',
+        required=False,
+        max_length=15,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Số điện thoại'}),
+    )
+    password = forms.CharField(
+        label='Mật khẩu',
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Mật khẩu'}),
+    )
+    role = forms.ChoiceField(
+        label='Vai trò',
+        choices=[('admin', 'Admin'), ('staff', 'Cán bộ'), ('citizen', 'Người dân')],
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    district = forms.ChoiceField(
+        label='Quận',
+        choices=[
+            ('Hải Châu', 'Hải Châu'),
+            ('Thanh Khê', 'Thanh Khê'),
+            ('Liên Chiểu', 'Liên Chiểu'),
+            ('Sơn Trà', 'Sơn Trà'),
+            ('Ngũ Hành Sơn', 'Ngũ Hành Sơn'),
+            ('Cẩm Lệ', 'Cẩm Lệ'),
+            ('Hòa Vang', 'Hòa Vang'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+
 class UserRegistrationForm(forms.ModelForm):
     password1 = forms.CharField(label='Mật khẩu', widget=forms.PasswordInput(attrs={'class': 'form-control'}))
     password2 = forms.CharField(label='Xác nhận mật khẩu', widget=forms.PasswordInput(attrs={'class': 'form-control'}))

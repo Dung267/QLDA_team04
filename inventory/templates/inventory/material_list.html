@@ -1,31 +1,203 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Material List" }}</h4>
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-box-seam-fill text-primary me-2"></i>Kho vật tư
+  </h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'inventory:add_stock' %}" class="btn btn-success">
+      <i class="bi bi-plus-circle me-1"></i>Nhập kho
+    </a>
+    {% if user.is_staff %}
+    <a href="{% url 'inventory:material_create' %}" class="btn btn-outline-primary">
+      <i class="bi bi-archive me-1"></i>Thêm vật tư
+    </a>
+    {% endif %}
+  </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Material List</div></div>
+
+{# Low stock alert banner #}
+{% if low_stock_count %}
+<div class="alert alert-warning d-flex align-items-center gap-3 mb-3 border-0 shadow-sm">
+  <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+  <div>
+    <strong>{{ low_stock_count }} loại vật tư</strong> đang ở mức tồn kho thấp hơn ngưỡng tối thiểu.
+    <a href="?stock=low" class="alert-link ms-1">Xem ngay</a>
+  </div>
+</div>
 {% endif %}
+
+{# Stats #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-primary">{{ stats.total_types|default:0 }}</div>
+      <div class="small text-muted">Loại vật tư</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-danger">{{ stats.low_stock|default:0 }}</div>
+      <div class="small text-muted">Tồn kho thấp</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-success">{{ stats.total_value|default:0 }}M</div>
+      <div class="small text-muted">Tổng giá trị (M₫)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-warning">{{ stats.transactions_today|default:0 }}</div>
+      <div class="small text-muted">Giao dịch hôm nay</div>
+    </div>
+  </div>
+</div>
+
+{# Filter #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold text-muted mb-1">Tìm kiếm</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control"
+                 placeholder="Tên, mã vật tư, nhà cung cấp..."
+                 value="{{ request.GET.q }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Tồn kho</label>
+        <select name="stock" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          <option value="low"  {% if request.GET.stock == 'low'  %}selected{% endif %}>⚠️ Dưới ngưỡng</option>
+          <option value="ok"   {% if request.GET.stock == 'ok'   %}selected{% endif %}>✅ Đủ hàng</option>
+          <option value="zero" {% if request.GET.stock == 'zero' %}selected{% endif %}>❌ Hết hàng</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary btn-sm me-2">
+          <i class="bi bi-funnel me-1"></i>Lọc
+        </button>
+        <a href="{% url 'inventory:material_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-circle me-1"></i>Xóa lọc
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Table #}
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.84rem">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Vật tư</th>
+            <th class="text-end">Tồn kho</th>
+            <th class="text-end">Tối thiểu</th>
+            <th>Đơn vị</th>
+            <th class="text-end">Đơn giá</th>
+            <th>Nhà cung cấp</th>
+            <th>Trạng thái</th>
+            <th class="text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mat in page_obj %}
+          <tr class="{% if mat.current_stock <= 0 %}table-danger{% elif mat.is_low_stock %}table-warning{% endif %}">
+            <td class="ps-3">
+              <div class="fw-semibold">{{ mat.name }}</div>
+              <code class="text-muted" style="font-size:.75rem">{{ mat.code }}</code>
+            </td>
+            <td class="text-end fw-bold
+              {% if mat.current_stock <= 0 %}text-danger
+              {% elif mat.is_low_stock %}text-warning
+              {% else %}text-success{% endif %}">
+              {{ mat.current_stock|floatformat:"-1" }}
+            </td>
+            <td class="text-end text-muted">{{ mat.min_stock|floatformat:"-1" }}</td>
+            <td class="text-muted">{{ mat.get_unit_display }}</td>
+            <td class="text-end text-muted">{{ mat.unit_price|floatformat:0 }} ₫</td>
+            <td class="text-muted small text-truncate" style="max-width:140px"
+                title="{{ mat.supplier }}">{{ mat.supplier|default:"—" }}</td>
+            <td>
+              {% if mat.current_stock <= 0 %}
+                <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Hết hàng</span>
+              {% elif mat.is_low_stock %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Sắp hết</span>
+              {% else %}
+                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đủ hàng</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'inventory:add_stock' %}?material={{ mat.pk }}"
+                   class="btn btn-outline-success" title="Nhập kho">
+                  <i class="bi bi-box-arrow-in-down"></i>
+                </a>
+                <a href="{% url 'inventory:export_stock' %}?material={{ mat.pk }}"
+                   class="btn btn-outline-warning" title="Xuất kho">
+                  <i class="bi bi-box-arrow-up"></i>
+                </a>
+                {% if user.is_staff %}
+                <a href="{% url 'inventory:material_edit' mat.pk %}"
+                   class="btn btn-outline-secondary" title="Chỉnh sửa">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-5">
+              <i class="bi bi-box-seam display-6 d-block mb-2 opacity-50"></i>
+              Không có vật tư nào trong kho
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+      <small class="text-muted">
+        {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ page_obj.paginator.count }} loại vật tư
+      </small>
+      <nav><ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.stock %}&stock={{ request.GET.stock }}{% endif %}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.stock %}&stock={{ request.GET.stock }}{% endif %}">{{ num }}</a>
+          </li>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.stock %}&stock={{ request.GET.stock }}{% endif %}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul></nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

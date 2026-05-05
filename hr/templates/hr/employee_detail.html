@@ -1,31 +1,249 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Employee Detail" }}</h4>
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'hr:employee_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-person-badge-fill text-primary me-2"></i>{{ page_title }}
+  </h4>
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'hr:assignment_create' %}?employee={{ emp.pk }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-briefcase-fill me-1"></i>Giao việc
+    </a>
+    <a href="{% url 'admin:hr_employee_change' emp.pk %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Sửa
+    </a>
+  </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Employee Detail</div></div>
-{% endif %}
+
+<div class="row g-4">
+  {# Cột trái - Thông tin cá nhân #}
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body text-center py-4">
+        <div class="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold
+                    d-flex align-items-center justify-content-center mx-auto mb-3"
+             style="width:72px;height:72px;font-size:1.8rem">
+          {{ emp.user.get_full_name|first|upper }}
+        </div>
+        <h5 class="fw-bold mb-0">{{ emp.user.get_full_name }}</h5>
+        <div class="text-muted small mb-2">{{ emp.position|default:"Chưa cập nhật chức vụ" }}</div>
+        {% if emp.is_active %}
+          <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đang làm việc</span>
+        {% else %}
+          <span class="badge bg-secondary">Đã nghỉ việc</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Thông tin chung</h6>
+        <table class="table table-sm table-borderless mb-0" style="font-size:.875rem">
+          <tr>
+            <td class="text-muted ps-0" style="width:120px">Mã NV</td>
+            <td class="fw-semibold">{{ emp.employee_id }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted ps-0">Phòng ban</td>
+            <td>{{ emp.department.name|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted ps-0">Loại HĐ</td>
+            <td>{{ emp.contract_type|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted ps-0">Ngày vào</td>
+            <td>{{ emp.hire_date|date:"d/m/Y"|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted ps-0">Email</td>
+            <td class="small">{{ emp.user.email }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted ps-0">SĐT CV</td>
+            <td>{{ emp.phone_work|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted ps-0">Liên hệ KC</td>
+            <td class="small">{{ emp.emergency_contact|default:"—" }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    {# Thống kê công việc #}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart text-primary me-2"></i>Thống kê công việc</h6>
+        <div class="row g-2 text-center">
+          <div class="col-4">
+            <div class="fw-bold fs-5 text-warning">{{ assignment_stats.todo }}</div>
+            <div class="small text-muted">Chờ</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold fs-5 text-info">{{ assignment_stats.in_progress }}</div>
+            <div class="small text-muted">Đang làm</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold fs-5 text-success">{{ assignment_stats.done }}</div>
+            <div class="small text-muted">Xong</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Cột phải - Tabs #}
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-bottom">
+        <ul class="nav nav-tabs card-header-tabs" id="empTab">
+          <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-assignments">
+              <i class="bi bi-briefcase me-1"></i>Công việc
+              <span class="badge bg-primary ms-1">{{ assignment_stats.todo|add:assignment_stats.in_progress }}</span>
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-leaves">
+              <i class="bi bi-calendar-check me-1"></i>Nghỉ phép
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-trainings">
+              <i class="bi bi-mortarboard me-1"></i>Đào tạo
+            </button>
+          </li>
+        </ul>
+      </div>
+      <div class="card-body p-0">
+        <div class="tab-content">
+          {# Tab Công việc #}
+          <div class="tab-pane fade show active" id="tab-assignments">
+            {% if assignments %}
+            <div class="list-group list-group-flush">
+              {% for a in assignments %}
+              <div class="list-group-item px-4 py-3">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                  <div class="flex-grow-1">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem">{{ a.title }}</div>
+                    {% if a.description %}
+                    <div class="text-muted small mb-1">{{ a.description|truncatechars:80 }}</div>
+                    {% endif %}
+                    <div class="d-flex gap-3" style="font-size:.8rem">
+                      {% if a.due_date %}
+                      <span class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ a.due_date|date:"d/m/Y" }}</span>
+                      {% endif %}
+                      {% if a.assigned_by %}
+                      <span class="text-muted"><i class="bi bi-person me-1"></i>{{ a.assigned_by.get_full_name }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div>
+                    {% if a.status == 'todo' %}
+                      <span class="badge bg-warning text-dark">Chờ</span>
+                    {% elif a.status == 'in_progress' %}
+                      <span class="badge bg-info text-dark">Đang làm</span>
+                    {% elif a.status == 'done' %}
+                      <span class="badge bg-success">Xong</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Hủy</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-briefcase display-5 d-block mb-2 opacity-50"></i>
+              Chưa có công việc nào được giao
+            </div>
+            {% endif %}
+          </div>
+
+          {# Tab Nghỉ phép #}
+          <div class="tab-pane fade" id="tab-leaves">
+            {% if leave_requests %}
+            <div class="list-group list-group-flush">
+              {% for lr in leave_requests %}
+              <div class="list-group-item px-4 py-3">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <div class="fw-semibold small mb-1">
+                      {% if lr.leave_type == 'annual' %}📅 Phép năm
+                      {% elif lr.leave_type == 'sick' %}🏥 Nghỉ bệnh
+                      {% elif lr.leave_type == 'unpaid' %}💸 Không lương
+                      {% else %}📋 Khác{% endif %}
+                    </div>
+                    <div class="text-muted small">
+                      {{ lr.start_date|date:"d/m" }} – {{ lr.end_date|date:"d/m/Y" }}
+                      · {{ lr.reason|truncatechars:50 }}
+                    </div>
+                  </div>
+                  {% if lr.status == 'approved' %}
+                    <span class="badge bg-success">Đã duyệt</span>
+                  {% elif lr.status == 'rejected' %}
+                    <span class="badge bg-danger">Từ chối</span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-calendar-x display-5 d-block mb-2 opacity-50"></i>
+              Chưa có đơn nghỉ phép nào
+            </div>
+            {% endif %}
+          </div>
+
+          {# Tab Đào tạo #}
+          <div class="tab-pane fade" id="tab-trainings">
+            {% if trainings %}
+            <div class="list-group list-group-flush">
+              {% for tr in trainings %}
+              <div class="list-group-item px-4 py-3">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <div class="fw-semibold small mb-1">{{ tr.title }}</div>
+                    <div class="text-muted small">
+                      <i class="bi bi-person-video2 me-1"></i>{{ tr.trainer|default:"—" }}
+                      · {{ tr.start_date|date:"d/m" }} – {{ tr.end_date|date:"d/m/Y" }}
+                    </div>
+                  </div>
+                  {% if tr.certificate_required %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-award me-1"></i>Chứng chỉ</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-mortarboard display-5 d-block mb-2 opacity-50"></i>
+              Chưa tham gia khóa đào tạo nào
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if emp.notes %}
+    <div class="card border-0 shadow-sm mt-3">
+      <div class="card-body">
+        <h6 class="fw-bold mb-2"><i class="bi bi-sticky text-warning me-2"></i>Ghi chú</h6>
+        <p class="text-muted mb-0" style="font-size:.9rem">{{ emp.notes }}</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

@@ -1,31 +1,201 @@
 {% extends "base.html" %}
 {% block content %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Contract List" }}</h4>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-file-earmark-text text-primary me-2"></i>Quản lý hợp đồng
+  </h4>
+  {% if user.is_staff_member %}
+  <a href="{% url 'contracts:contract_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Tạo hợp đồng
+  </a>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Contract List</div></div>
-{% endif %}
+
+{# ── Thống kê nhanh ── #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-primary">{{ stats.total|default:0 }}</div>
+      <div class="small text-muted">Tổng hợp đồng</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-info">{{ stats.active|default:0 }}</div>
+      <div class="small text-muted">Đang thực hiện</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-success">{{ stats.completed|default:0 }}</div>
+      <div class="small text-muted">Hoàn thành</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-warning">{{ stats.draft|default:0 }}</div>
+      <div class="small text-muted">Bản nháp</div>
+    </div>
+  </div>
+</div>
+
+{# ── Filter ── #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold text-muted mb-1">Tìm kiếm</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control"
+                 placeholder="Số HĐ, tiêu đề, nhà thầu..."
+                 value="{{ request.GET.q|default:'' }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Trạng thái</label>
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          <option value="draft"      {% if request.GET.status == 'draft' %}selected{% endif %}>Nháp</option>
+          <option value="active"     {% if request.GET.status == 'active' %}selected{% endif %}>Đang thực hiện</option>
+          <option value="completed"  {% if request.GET.status == 'completed' %}selected{% endif %}>Hoàn thành</option>
+          <option value="terminated" {% if request.GET.status == 'terminated' %}selected{% endif %}>Chấm dứt</option>
+          <option value="expired"    {% if request.GET.status == 'expired' %}selected{% endif %}>Hết hạn</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary btn-sm me-1">
+          <i class="bi bi-funnel me-1"></i>Lọc
+        </button>
+        <a href="{% url 'contracts:contract_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-circle me-1"></i>Xóa lọc
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Bảng dữ liệu ── #}
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.85rem">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Số HĐ</th>
+            <th>Tiêu đề</th>
+            <th>Nhà thầu</th>
+            <th>Giá trị (₫)</th>
+            <th>Thời gian</th>
+            <th>Tiến độ</th>
+            <th>Trạng thái</th>
+            <th class="pe-3 text-end">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for contract in page_obj %}
+          <tr>
+            <td class="ps-3">
+              <code class="text-muted">{{ contract.contract_number }}</code>
+            </td>
+            <td>
+              <a href="{% url 'contracts:contract_detail' contract.pk %}"
+                 class="fw-semibold text-decoration-none text-dark">
+                {{ contract.title|truncatechars:45 }}
+              </a>
+            </td>
+            <td class="text-muted">{{ contract.contractor.name|default:"—"|truncatechars:30 }}</td>
+            <td class="fw-semibold text-primary">
+              {{ contract.value|floatformat:0 }} ₫
+            </td>
+            <td class="text-muted">
+              <div>{{ contract.start_date|date:"d/m/Y" }}</div>
+              <div class="text-danger" style="font-size:.78rem">→ {{ contract.end_date|date:"d/m/Y" }}</div>
+            </td>
+            <td style="min-width:90px">
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height:5px">
+                  <div class="progress-bar
+                    {% if contract.progress_percent >= 100 %}bg-success
+                    {% elif contract.progress_percent >= 60 %}bg-primary
+                      {% else %}bg-warning{% endif %}
+                      {% if contract.progress_percent >= 100 %}w-100
+                      {% elif contract.progress_percent >= 75 %}w-75
+                      {% elif contract.progress_percent >= 50 %}w-50
+                      {% elif contract.progress_percent > 0 %}w-25{% endif %}">
+                  </div>
+                </div>
+                <span class="text-muted" style="font-size:.75rem;white-space:nowrap">
+                  {{ contract.progress_percent|default:0 }}%
+                </span>
+              </div>
+            </td>
+            <td>
+              {% if contract.status == 'active' %}
+                <span class="badge bg-info text-dark">Đang TH</span>
+              {% elif contract.status == 'completed' %}
+                <span class="badge bg-success">Hoàn thành</span>
+              {% elif contract.status == 'terminated' %}
+                <span class="badge bg-danger">Chấm dứt</span>
+              {% elif contract.status == 'expired' %}
+                <span class="badge bg-secondary">Hết hạn</span>
+              {% else %}
+                <span class="badge bg-secondary">Nháp</span>
+              {% endif %}
+            </td>
+            <td class="pe-3 text-end">
+              <a href="{% url 'contracts:contract_detail' contract.pk %}"
+                 class="btn btn-sm btn-outline-primary" title="Xem chi tiết">
+                <i class="bi bi-eye"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-5">
+              <i class="bi bi-file-earmark-x display-6 d-block mb-2 opacity-50"></i>
+              Không có hợp đồng nào
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Phân trang #}
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-center p-3 border-top">
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+          </li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
 {% endblock %}

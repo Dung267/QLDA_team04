@@ -1,31 +1,222 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Leave Form" }}</h4>
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'hr:leave_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-calendar-plus text-primary me-2"></i>
+    {% if object %}Chỉnh sửa đơn nghỉ phép{% else %}Tạo đơn nghỉ phép{% endif %}
+  </h4>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Leave Form</div></div>
-{% endif %}
+
+<div class="row g-4 justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {# Chọn nhân viên – chỉ manager mới thấy, nhân viên thường nộp cho chính mình #}
+          {% if is_manager %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Nhân viên <span class="text-danger">*</span>
+            </label>
+            <select name="employee"
+                    class="form-select {% if form.errors %}{% if not request.POST.employee %}is-invalid{% endif %}{% endif %}"
+                    required>
+              <option value="">-- Chọn nhân viên --</option>
+              {% for nv in employee_list %}
+              <option value="{{ nv.pk }}"
+                      {% if request.POST.employee == nv.pk|stringformat:'s' %}selected
+                      {% elif preselected == nv.pk %}selected{% endif %}>
+                {{ nv.user.get_full_name }} ({{ nv.employee_id }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nhân viên</label>
+            <input type="text" class="form-control bg-light" value="{{ request.user.get_full_name }}" disabled>
+          </div>
+          {% endif %}
+
+          {# leave_type – model choices: annual / sick / unpaid / other #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Loại nghỉ phép <span class="text-danger">*</span>
+            </label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="leave_type" id="lt-annual" value="annual"
+                       {% if form.leave_type.value == 'annual' or not form.leave_type.value %}checked{% endif %} required>
+                <label class="btn btn-outline-primary w-100 text-start" for="lt-annual">
+                  <i class="bi bi-calendar-date me-2"></i>Phép năm
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="leave_type" id="lt-sick" value="sick"
+                       {% if form.leave_type.value == 'sick' %}checked{% endif %}>
+                <label class="btn btn-outline-danger w-100 text-start" for="lt-sick">
+                  <i class="bi bi-bandaid me-2"></i>Nghỉ bệnh
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="leave_type" id="lt-unpaid" value="unpaid"
+                       {% if form.leave_type.value == 'unpaid' %}checked{% endif %}>
+                <label class="btn btn-outline-secondary w-100 text-start" for="lt-unpaid">
+                  <i class="bi bi-slash-circle me-2"></i>Không lương
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="leave_type" id="lt-other" value="other"
+                       {% if form.leave_type.value == 'other' %}checked{% endif %}>
+                <label class="btn btn-outline-info w-100 text-start" for="lt-other">
+                  <i class="bi bi-three-dots me-2"></i>Khác
+                </label>
+              </div>
+            </div>
+            {% if form.leave_type.errors %}
+            <div class="text-danger small mt-1">{{ form.leave_type.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            {# start_date – DB date, Bắt buộc #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                Từ ngày <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="start_date" id="start-date"
+                     class="form-control {% if form.start_date.errors %}is-invalid{% endif %}"
+                     value="{{ form.start_date.value|default:'' }}"
+                     required onchange="calcDays()">
+              {% if form.start_date.errors %}
+              <div class="invalid-feedback">{{ form.start_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            {# end_date – DB date, Bắt buộc #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                Đến ngày <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="end_date" id="end-date"
+                     class="form-control {% if form.end_date.errors %}is-invalid{% endif %}"
+                     value="{{ form.end_date.value|default:'' }}"
+                     required onchange="calcDays()">
+              {% if form.end_date.errors %}
+              <div class="invalid-feedback">{{ form.end_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Hiển thị số ngày tính được #}
+          <div id="days-summary" class="alert alert-info d-flex align-items-center gap-2 py-2 mb-3"
+               style="font-size:.9rem;display:none!important">
+            <i class="bi bi-calendar3"></i>
+            <span>Số ngày nghỉ: <strong id="num-days">—</strong> ngày làm việc</span>
+          </div>
+
+          {# reason – DB text, Bắt buộc #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Lý do nghỉ phép <span class="text-danger">*</span>
+            </label>
+            <textarea name="reason" rows="4"
+                      class="form-control {% if form.reason.errors %}is-invalid{% endif %}"
+                      placeholder="Mô tả rõ lý do nghỉ phép..." required>{{ form.reason.value|default:'' }}</textarea>
+            {% if form.reason.errors %}
+            <div class="invalid-feedback">{{ form.reason.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{% url 'hr:leave_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x me-1"></i>Hủy
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send me-1"></i>
+              {% if object %}Cập nhật đơn{% else %}Gửi đơn nghỉ phép{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    {# Quota thông tin #}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart text-primary me-2"></i>Số ngày phép còn lại</h6>
+        {% if leave_quota %}
+        {% for q in leave_quota %}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="small">{{ q.label }}</span>
+          <div class="d-flex align-items-center gap-2">
+            <div class="progress" style="width:80px;height:6px">
+              <div class="progress-bar bg-primary"
+                   style="width:{{ q.used_pct }}%"></div>
+            </div>
+            <span class="small fw-semibold">{{ q.remaining }}/{{ q.total }} ngày</span>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-muted small">
+          <div class="d-flex justify-content-between mb-2">
+            <span>Phép năm</span>
+            <strong>{{ annual_remaining|default:"12" }}/12 ngày</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Ốm đau</span>
+            <strong>{{ sick_remaining|default:"5" }}/5 ngày</strong>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Quy định nghỉ phép</h6>
+        <ul class="list-unstyled small text-muted mb-0">
+          <li class="mb-2"><i class="bi bi-dot"></i>Nộp đơn trước ít nhất 3 ngày làm việc</li>
+          <li class="mb-2"><i class="bi bi-dot"></i>Nghỉ ốm cần có xác nhận y tế nếu > 2 ngày</li>
+          <li class="mb-2"><i class="bi bi-dot"></i>Phép năm được cộng dồn tối đa 30 ngày</li>
+          <li><i class="bi bi-dot"></i>Nghỉ khẩn cấp liên hệ trực tiếp quản lý</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function calcDays() {
+  const s = document.getElementById('start-date').value;
+  const e = document.getElementById('end-date').value;
+  const div = document.getElementById('days-summary');
+  const span = document.getElementById('num-days');
+  if (!s || !e) { div.style.display = 'none'; return; }
+  const start = new Date(s), end = new Date(e);
+  if (end < start) { span.textContent = '⚠️ Ngày kết thúc phải sau ngày bắt đầu'; div.style.display = 'flex'; return; }
+  // Count business days
+  let days = 0, cur = new Date(start);
+  while (cur <= end) {
+    const d = cur.getDay();
+    if (d !== 0 && d !== 6) days++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  span.textContent = days;
+  div.style.display = 'flex';
+}
+document.getElementById('start-date').addEventListener('change', calcDays);
+document.getElementById('end-date').addEventListener('change', calcDays);
+calcDays();
+</script>
 {% endblock %}

@@ -9,4 +9,5 @@ urlpatterns = [
     path('read-all/', views.mark_all_read, name='mark_all_read'),
     path('<int:pk>/delete/', views.delete_notification, name='delete'),
     path('unread-count/', views.unread_count, name='unread_count'),
+    path("clear-all/", views.clear_all, name="clear_all"), 
 ]

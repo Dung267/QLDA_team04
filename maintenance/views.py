@@ -4,7 +4,11 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg
 from django.http import JsonResponse
+from django.utils.decorators import method_decorator
 from django.utils import timezone
+from django.views import View
+
+from infrastructure.models import Infrastructure, Road
 from .models import MaintenanceRequest, MaintenancePhoto, MaintenanceComment, MaintenanceSchedule
 from .forms import MaintenanceRequestForm, MaintenanceCommentForm, MaintenanceScheduleForm
 from accounts.decorators import staff_required
@@ -215,29 +219,119 @@ def add_comment(request, pk):
 
 @login_required
 def schedule_list(request):
-    schedules = MaintenanceSchedule.objects.prefetch_related('assigned_to').all()
-    paginator = Paginator(schedules, 20)
+    """
+    Danh sách lịch bảo trì.
+
+    Cho phép lọc nhanh theo từ khóa (tiêu đề / tuyến đường / hạ tầng) và theo trạng thái.
+    Hỗ trợ phân trang và giữ lại các tham số lọc khi chuyển trang.
+    """
+    paginate_by = 20
+    qs = (
+        MaintenanceSchedule.objects.select_related('road', 'infrastructure', 'created_by')
+        .prefetch_related('assigned_to')
+        .all()
+    )
+
+    q = (request.GET.get('q') or '').strip()
+    status = (request.GET.get('status') or '').strip()
+
+    if q:
+        qs = qs.filter(
+            Q(title__icontains=q)
+            | Q(road__name__icontains=q)
+            | Q(road__code__icontains=q)
+            | Q(infrastructure__name__icontains=q)
+            | Q(infrastructure__code__icontains=q)
+        )
+
+    if status:
+        qs = qs.filter(status=status)
+
+    paginator = Paginator(qs, paginate_by)
     page = paginator.get_page(request.GET.get('page', 1))
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+
     return render(request, 'maintenance/schedule_list.html', {
-        'page_obj': page, 'page_title': 'Lịch bảo trì'
+        'page_obj': page,
+        'page_title': 'Danh sách lịch bảo trì',
+        'status_choices': MaintenanceSchedule.STATUS_CHOICES,
+        'q': q,
+        'selected_status': status,
+        'querystring': query_params.urlencode(),
     })
 
 
-@login_required
-@staff_required
-def schedule_create(request):
-    if request.method == 'POST':
+@method_decorator([login_required, staff_required], name='dispatch')
+class ScheduleCreateView(View):
+    """Xử lý tạo mới lịch bảo trì từ biểu mẫu nghiệp vụ.
+
+    View này hiển thị form lập lịch bảo trì, kiểm tra dữ liệu đầu vào,
+    gán người tạo lịch và lưu thông tin xuống hệ thống.
+    """
+
+    template_name = 'maintenance/schedule_form.html'
+
+    def _build_context(self, form):
+        return {
+            'form': form,
+            'page_title': 'Thêm Lịch bảo trì mới',
+            'road_options': list(Road.objects.order_by('name').values('id', 'name')),
+            'infrastructure_options': list(Infrastructure.objects.order_by('name').values('id', 'name')),
+        }
+
+    def get(self, request):
+        form = MaintenanceScheduleForm()
+        return render(request, self.template_name, self._build_context(form))
+
+    def post(self, request):
         form = MaintenanceScheduleForm(request.POST)
         if form.is_valid():
             schedule = form.save(commit=False)
             schedule.created_by = request.user
             schedule.save()
+            form.instance = schedule
             form.save_m2m()
             messages.success(request, 'Đã tạo lịch bảo trì.')
             return redirect('maintenance:schedule_list')
-    else:
-        form = MaintenanceScheduleForm()
-    return render(request, 'maintenance/schedule_form.html', {'form': form, 'page_title': 'Tạo lịch bảo trì'})
+
+        return render(request, self.template_name, self._build_context(form))
+
+
+@method_decorator([login_required, staff_required], name='dispatch')
+class ScheduleUpdateView(View):
+    """Xử lý cập nhật lịch bảo trì hiện có.
+
+    View này nạp dữ liệu lịch bảo trì vào form, cho phép chỉnh sửa,
+    kiểm tra hợp lệ và lưu bản cập nhật theo đúng ràng buộc nghiệp vụ.
+    """
+
+    template_name = 'maintenance/schedule_form.html'
+
+    def _build_context(self, form, schedule):
+        return {
+            'form': form,
+            'page_title': 'Cập nhật Lịch bảo trì',
+            'schedule': schedule,
+            'road_options': list(Road.objects.order_by('name').values('id', 'name')),
+            'infrastructure_options': list(Infrastructure.objects.order_by('name').values('id', 'name')),
+        }
+
+    def get(self, request, pk):
+        schedule = get_object_or_404(MaintenanceSchedule, pk=pk)
+        form = MaintenanceScheduleForm(instance=schedule)
+        return render(request, self.template_name, self._build_context(form, schedule))
+
+    def post(self, request, pk):
+        schedule = get_object_or_404(MaintenanceSchedule, pk=pk)
+        form = MaintenanceScheduleForm(request.POST, instance=schedule)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Đã cập nhật lịch bảo trì.')
+            return redirect('maintenance:schedule_list')
+
+        return render(request, self.template_name, self._build_context(form, schedule))
 
 
 @login_required

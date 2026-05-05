@@ -1,31 +1,236 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Training List" }}</h4>
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-mortarboard-fill text-primary me-2"></i>Quản lý đào tạo
+  </h4>
+  {% if user.is_admin or user.is_staff_member %}
+  <a href="{% url 'hr:training_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Tạo khóa đào tạo
+  </a>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Training List</div></div>
+
+{# ── Stats ─────────────────────────────────────────────── #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-primary bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-5 text-primary">{{ stats.total|default:0 }}</div>
+      <div class="small text-muted">Tổng khóa</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-warning bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-5 text-warning">{{ stats.upcoming|default:0 }}</div>
+      <div class="small text-muted">Sắp diễn ra</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-info bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-5 text-info">{{ stats.ongoing|default:0 }}</div>
+      <div class="small text-muted">Đang diễn ra</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-success bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-5 text-success">{{ stats.completed|default:0 }}</div>
+      <div class="small text-muted">Đã hoàn thành</div>
+    </div>
+  </div>
+</div>
+
+{# ── Filter ────────────────────────────────────────────── #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold text-muted mb-1">Tìm kiếm</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control"
+                 placeholder="Tên khóa, giảng viên..." value="{{ q }}">
+        </div>
+      </div>
+      <div class="col-md-2">
+        {# computed_status từ view, không phải DB field #}
+        <label class="form-label small fw-semibold text-muted mb-1">Tình trạng</label>
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          <option value="upcoming"  {% if request.GET.status == 'upcoming' %}selected{% endif %}>Sắp diễn ra</option>
+          <option value="ongoing"   {% if request.GET.status == 'ongoing' %}selected{% endif %}>Đang diễn ra</option>
+          <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Hoàn thành</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Năm</label>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          {% for y in year_list %}
+          <option value="{{ y }}" {% if request.GET.year == y|stringformat:'s' %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary btn-sm me-2">
+          <i class="bi bi-funnel me-1"></i>Lọc
+        </button>
+        <a href="{% url 'hr:training_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-circle me-1"></i>Xóa lọc
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Card grid ─────────────────────────────────────────── #}
+<div class="row g-3">
+  {% for tr in page_obj %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card border-0 shadow-sm h-100">
+
+      {# Status stripe – dùng computed_status được set bởi view #}
+      <div class="card-header border-0 py-2 px-3
+        {% if tr.computed_status == 'completed' %}bg-success
+        {% elif tr.computed_status == 'ongoing' %}bg-info
+        {% elif tr.computed_status == 'upcoming' %}bg-warning
+        {% else %}bg-secondary{% endif %}
+        bg-opacity-10">
+        <div class="d-flex align-items-center justify-content-between">
+          {% if tr.computed_status == 'completed' %}
+            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Hoàn thành</span>
+          {% elif tr.computed_status == 'ongoing' %}
+            <span class="badge bg-info text-dark"><i class="bi bi-play-circle me-1"></i>Đang diễn ra</span>
+          {% elif tr.computed_status == 'upcoming' %}
+            <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Sắp diễn ra</span>
+          {% else %}
+            <span class="badge bg-secondary"><i class="bi bi-dash-circle me-1"></i>Không xác định</span>
+          {% endif %}
+
+          {# certificate_required – DB BooleanField #}
+          {% if tr.certificate_required %}
+          <span class="badge bg-primary bg-opacity-75">
+            <i class="bi bi-award me-1"></i>Có chứng chỉ
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card-body">
+        {# title – DB CharField(200) #}
+        <h6 class="fw-bold mb-1">{{ tr.title }}</h6>
+        {# description – DB TextField #}
+        <p class="text-muted small mb-3">{{ tr.description|truncatechars:100|default:"Chưa có mô tả." }}</p>
+
+        <div class="row g-2 mb-3" style="font-size:.82rem">
+          {# trainer – DB CharField(100) #}
+          <div class="col-6">
+            <div class="text-muted">Giảng viên</div>
+            <div class="fw-semibold text-truncate" title="{{ tr.trainer }}">
+              <i class="bi bi-person-video2 text-primary me-1"></i>
+              {{ tr.trainer|default:"—" }}
+            </div>
+          </div>
+          {# participants_count – computed từ M2M trong view #}
+          <div class="col-6">
+            <div class="text-muted">Học viên</div>
+            <div class="fw-semibold">
+              <i class="bi bi-people text-success me-1"></i>
+              {{ tr.participants_count }} người
+            </div>
+          </div>
+          {# start_date – DB DateField #}
+          <div class="col-6">
+            <div class="text-muted">Bắt đầu</div>
+            <div class="fw-semibold">{{ tr.start_date|date:"d/m/Y" }}</div>
+          </div>
+          {# end_date – DB DateField #}
+          <div class="col-6">
+            <div class="text-muted">Kết thúc</div>
+            <div class="fw-semibold">{{ tr.end_date|date:"d/m/Y" }}</div>
+          </div>
+        </div>
+
+        {# Progress bar chỉ hiện khi ongoing – progress_pct computed trong view #}
+        {% if tr.computed_status == 'ongoing' %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>Tiến độ</span>
+            <span>{{ tr.progress_pct }}%</span>
+          </div>
+          <div class="progress" style="height:5px">
+            <div class="progress-bar bg-info" style="width:{{ tr.progress_pct }}%"></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card-footer bg-transparent border-top d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">
+          <i class="bi bi-calendar3 me-1"></i>{{ tr.created_at|date:"d/m/Y" }}
+        </small>
+        <div class="btn-group btn-group-sm">
+          <a href="{% url 'hr:training_detail' tr.pk %}"
+             class="btn btn-outline-primary btn-sm" title="Xem chi tiết">
+            <i class="bi bi-eye"></i>
+          </a>
+          {% if user.is_admin or user.is_staff_member %}
+          <a href="{% url 'hr:training_edit' tr.pk %}"
+             class="btn btn-outline-secondary btn-sm" title="Chỉnh sửa">
+            <i class="bi bi-pencil"></i>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-mortarboard display-5 d-block mb-2 opacity-50"></i>
+        <div class="fw-semibold mb-1">Chưa có khóa đào tạo nào</div>
+        <small>Nhấn "Tạo khóa đào tạo" để bắt đầu</small>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── Pagination ────────────────────────────────────────── #}
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+  <nav>
+    <ul class="pagination pagination-sm">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if q %}&q={{ q }}{% endif %}">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if q %}&q={{ q }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.year %}&year={{ request.GET.year }}{% endif %}{% if q %}&q={{ q }}{% endif %}">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
 {% endif %}
 {% endblock %}
