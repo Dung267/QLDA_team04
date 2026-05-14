@@ -1,200 +1,398 @@
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.utils import timezone
-from django.views.generic import ListView, CreateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import OuterRef, Subquery
+from django.views.generic import ListView, CreateView, DetailView, UpdateView
 from django.urls import reverse_lazy
+from django.db.models import OuterRef, Subquery, Max, F, Q
+from django.http import HttpResponseForbidden
 
 from .models import Vehicle, Inspection, InspectionCenter
-from accounts.decorators import staff_required
-from .forms import VehicleForm, ScheduleForm
+from .forms import VehicleForm, ScheduleInspectionForm, InspectionResultForm, PaymentForm
 
 
 class VehicleListView(LoginRequiredMixin, ListView):
-    template_name = "vehicle_inspection/vehicle_list.html"
-    context_object_name = "vehicles"
+    """
+    Danh sách phương tiện của chủ xe
+    - ORM: Dùng Subquery + OuterRef tránh N+1 query
+    - Logic: Chỉ xem xe của user hiện tại
+    """
+    template_name = 'vehicle_inspection/vehicle_list.html'
+    context_object_name = 'vehicles'
+    paginate_by = 20
 
     def get_queryset(self):
-        latest_inspection_qs = Inspection.objects.filter(vehicle=OuterRef("pk")).order_by("-scheduled_date")
-        latest_expiry_qs = (
-            Inspection.objects.filter(vehicle=OuterRef("pk"), valid_until__isnull=False)
-            .order_by("-valid_until")
-            .values("valid_until")
-        )
-        return (
-            Vehicle.objects.filter(owner=self.request.user, is_active=True)
-            .annotate(
-                latest_schedule_date=Subquery(latest_inspection_qs.values("scheduled_date")[:1]),
-                latest_center_name=Subquery(latest_inspection_qs.values("center__name")[:1]),
-                inspection_expiry=Subquery(latest_expiry_qs[:1]),
-            )
-            .order_by("-created_at")
-        )
+        latest_inspection_qs = Inspection.objects.filter(
+            vehicle=OuterRef('pk')
+        ).order_by('-scheduled_date')
+
+        latest_expiry_qs = Inspection.objects.filter(
+            vehicle=OuterRef('pk'),
+            valid_until__isnull=False,
+            status='passed'
+        ).order_by('-valid_until')
+
+        latest_center_qs = Inspection.objects.filter(
+            vehicle=OuterRef('pk')
+        ).order_by('-scheduled_date')
+
+        queryset = Vehicle.objects.filter(
+            owner=self.request.user,
+            is_active=True
+        ).annotate(
+            latest_scheduled_date=Subquery(
+                latest_inspection_qs.values('scheduled_date')[:1]
+            ),
+            latest_center_name=Subquery(
+                latest_center_qs.values('center__name')[:1]
+            ),
+            # ĐÃ SỬA LỖI Ở ĐÂY: Đổi tên biến tránh xung đột với @property
+            inspection_expiry=Subquery(
+                latest_expiry_qs.values('valid_until')[:1]
+            ),
+        ).select_related().order_by('-created_at')
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         today = timezone.localdate()
-        for vehicle in context["vehicles"]:
-            expiry_date = getattr(vehicle, "inspection_expiry", None)
-            if expiry_date:
-                days_left = (expiry_date - today).days
-                vehicle.days_left = days_left
-                if days_left < 0:
-                    vehicle.expiry_badge_class = "text-bg-danger"
-                    vehicle.expiry_badge_text = "Het han"
-                    vehicle.expiry_is_alert = True
-                    vehicle.expiry_note = f"Da qua han {abs(days_left)} ngay"
-                    vehicle.expiry_note_class = "text-danger"
-                elif days_left <= 30:
-                    vehicle.expiry_badge_class = "text-bg-danger"
-                    vehicle.expiry_badge_text = "Sap het han"
-                    vehicle.expiry_is_alert = True
-                    vehicle.expiry_note = f"Con {days_left} ngay"
-                    vehicle.expiry_note_class = "text-muted"
-                else:
-                    vehicle.expiry_badge_class = "text-bg-success"
-                    vehicle.expiry_badge_text = "Hop le"
-                    vehicle.expiry_is_alert = False
-                    vehicle.expiry_note = f"Con {days_left} ngay"
-                    vehicle.expiry_note_class = "text-muted"
-            else:
-                vehicle.days_left = None
-                vehicle.expiry_badge_class = "text-bg-secondary"
-                vehicle.expiry_badge_text = "Chua co du lieu"
-                vehicle.expiry_is_alert = False
-                vehicle.expiry_note = ""
-                vehicle.expiry_note_class = "text-muted"
-        context["page_title"] = "Quan ly phuong tien"
+
+        # Tính toán trạng thái hạn đăng kiểm cho mỗi xe
+        for vehicle in context['vehicles']:
+            vehicle.expiry_date = getattr(vehicle, "inspection_expiry", None)
+
+        context['page_title'] = 'Quản lý phương tiện'
+        context['page_description'] = 'Theo dõi hạn đăng kiểm phương tiện'
         return context
 
 
 class VehicleCreateView(LoginRequiredMixin, CreateView):
+    """
+    Tạo phương tiện mới
+    - Tự động gán owner = request.user
+    - Redirect về danh sách sau khi tạo
+    """
     model = Vehicle
     form_class = VehicleForm
-    template_name = "vehicle_inspection/vehicle_form.html"
-    success_url = reverse_lazy("vehicle_inspection:vehicle_list")
+    template_name = 'vehicle_inspection/vehicle_form.html'
+    success_url = reverse_lazy('vehicle_inspection:vehicle_list')
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
         response = super().form_valid(form)
-        messages.success(self.request, "Da them phuong tien thanh cong.")
+        messages.success(
+            self.request,
+            f'Đã thêm phương tiện "{form.instance.license_plate}" thành công.'
+        )
         return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["page_title"] = "Them phuong tien"
+        context['page_title'] = 'Thêm phương tiện mới'
+        context['action'] = 'create'
         return context
+
+
+class VehicleUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """
+    Chỉnh sửa thông tin phương tiện
+    - Chỉ chủ xe mới được chỉnh sửa
+    """
+    model = Vehicle
+    form_class = VehicleForm
+    template_name = 'vehicle_inspection/vehicle_form.html'
+    success_url = reverse_lazy('vehicle_inspection:vehicle_list')
+
+    def test_func(self):
+        """Kiểm tra quyền: chỉ chủ xe được chỉnh sửa"""
+        vehicle = self.get_object()
+        return vehicle.owner == self.request.user
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f'Đã cập nhật phương tiện "{form.instance.license_plate}" thành công.'
+        )
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Chỉnh sửa phương tiện'
+        context['action'] = 'update'
+        return context
+
+    def handle_no_permission(self):
+        messages.error(self.request, 'Bạn không có quyền chỉnh sửa phương tiện này.')
+        return redirect('vehicle_inspection:vehicle_list')
 
 
 class InspectionListView(LoginRequiredMixin, ListView):
-    template_name = "vehicle_inspection/inspection_list.html"
-    context_object_name = "inspections"
+    """
+    Danh sách lịch đăng kiểm
+    - Chủ xe: Chỉ xem lịch của xe mình
+    - Cán bộ: Xem tất cả lịch
+    - Filter theo trạng thái
+    """
+    template_name = 'vehicle_inspection/inspection_list.html'
+    context_object_name = 'inspections'
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = Inspection.objects.select_related("vehicle", "center")
-        if not self.request.user.is_staff_member:
+        """Optimized query với select_related"""
+        queryset = Inspection.objects.select_related(
+            'vehicle',
+            'vehicle__owner',
+            'center',
+            'inspector'
+        ).order_by('-scheduled_date')
+
+        # Chủ xe: Chỉ xem lịch của xe mình
+        if not self.request.user.is_staff:
             queryset = queryset.filter(vehicle__owner=self.request.user)
-        selected_status = self.request.GET.get("status", "").strip()
-        if selected_status:
-            queryset = queryset.filter(status=selected_status)
-        return queryset.order_by("-scheduled_date")
+
+        # Filter theo trạng thái nếu có
+        status_filter = self.request.GET.get('status', '').strip()
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        for inspection in context["inspections"]:
-            if inspection.status == "pending":
-                inspection.workflow_label = "Cho xac nhan"
-                inspection.workflow_badge = "text-bg-warning"
-            elif inspection.status in ["in_progress", "needs_repair"]:
-                inspection.workflow_label = "Da duyet"
-                inspection.workflow_badge = "text-bg-primary"
-            else:
-                inspection.workflow_label = "Hoan thanh"
-                inspection.workflow_badge = "text-bg-success"
-            inspection.can_cancel = inspection.status == "pending" and not self.request.user.is_staff_member
-        context["status_choices"] = Inspection.STATUS_CHOICES
-        context["selected_status"] = self.request.GET.get("status", "")
-        context["page_title"] = "Danh sach lich dang kiem"
+
+        # Thêm thông tin badge cho mỗi lịch
+        for inspection in context['inspections']:
+            inspection.status_badge_class = inspection.get_status_badge_class()
+            inspection.status_label = inspection.get_status_label()
+            inspection.can_cancel = (
+                inspection.status == 'pending' and
+                inspection.vehicle.owner == self.request.user
+            )
+            inspection.can_update = (
+                self.request.user.is_staff and
+                inspection.status in ['pending', 'in_progress']
+            )
+            inspection.can_pay = (
+                not self.request.user.is_staff and
+                inspection.vehicle.owner == self.request.user and
+                inspection.fee and
+                not inspection.is_fee_paid
+            )
+
+        context['status_choices'] = Inspection.STATUS_CHOICES
+        context['selected_status'] = self.request.GET.get('status', '')
+        context['page_title'] = 'Danh sách lịch đăng kiểm'
+        context['is_staff'] = self.request.user.is_staff
         return context
 
 
-class ScheduleCreateView(LoginRequiredMixin, CreateView):
+class ScheduleInspectionView(LoginRequiredMixin, CreateView):
+    """
+    Đặt lịch đăng kiểm (cho chủ xe)
+    - Chỉ chọn Xe, Trung tâm, Ngày hẹn
+    - KHÔNG hiển thị field fee
+    - Tự động set status = 'pending'
+    """
     model = Inspection
-    form_class = ScheduleForm
-    template_name = "vehicle_inspection/schedule_form.html"
-    success_url = reverse_lazy("vehicle_inspection:inspection_list")
+    form_class = ScheduleInspectionForm
+    template_name = 'vehicle_inspection/schedule_form.html'
+    success_url = reverse_lazy('vehicle_inspection:inspection_list')
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields["vehicle"].queryset = Vehicle.objects.filter(owner=self.request.user, is_active=True)
-        form.fields["center"].queryset = InspectionCenter.objects.filter(is_active=True)
-        return form
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
-        selected_vehicle = form.cleaned_data["vehicle"]
-        if selected_vehicle.owner_id != self.request.user.id:
-            messages.error(self.request, "Ban khong the dat lich cho phuong tien khong thuoc so huu cua minh.")
+        """Kiểm tra quyền và set inspector"""
+        selected_vehicle = form.cleaned_data['vehicle']
+
+        # Kiểm tra xe thuộc về user
+        if selected_vehicle.owner != self.request.user:
+            messages.error(
+                self.request,
+                'Bạn không thể đặt lịch cho phương tiện không thuộc sở hữu của mình.'
+            )
             return self.form_invalid(form)
+
         form.instance.vehicle = selected_vehicle
-        form.instance.status = "pending"
+        form.instance.status = 'pending'
+        form.instance.fee = 0  # Cán bộ sẽ nhập phí sau
+
         response = super().form_valid(form)
-        messages.success(self.request, "Dat lich dang kiem thanh cong.")
+        messages.success(
+            self.request,
+            f'Đã đặt lịch đăng kiểm cho {selected_vehicle.license_plate} thành công.'
+        )
         return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["page_title"] = "Dat lich dang kiem"
-        context["schedule_min_date"] = timezone.localdate().isoformat()
+        context['page_title'] = 'Đặt lịch đăng kiểm'
+        context['schedule_min_date'] = timezone.localdate().isoformat()
+        context['instructions'] = [
+            'Chọn phương tiện của bạn',
+            'Chọn trung tâm đăng kiểm',
+            'Chọn ngày hẹn (tối thiểu hôm nay)',
+            'Nhấn "Xác nhận đặt lịch"'
+        ]
         return context
 
-@login_required
-def vehicle_list(request):
-    return VehicleListView.as_view()(request)
 
-@login_required
-def vehicle_create(request):
-    return VehicleCreateView.as_view()(request)
+class InspectionDetailView(LoginRequiredMixin, DetailView):
+    """
+    Chi tiết lịch đăng kiểm
+    - Chủ xe: Xem thông tin cơ bản
+    - Cán bộ: Xem đầy đủ, có thể cập nhật kết quả
+    """
+    model = Inspection
+    template_name = 'vehicle_inspection/inspection_detail.html'
+    context_object_name = 'inspection'
 
-@login_required
-def inspection_list(request):
-    return InspectionListView.as_view()(request)
+    def get_queryset(self):
+        queryset = Inspection.objects.select_related(
+            'vehicle',
+            'vehicle__owner',
+            'center',
+            'inspector'
+        )
 
-@login_required
-def schedule_inspection(request):
-    return ScheduleCreateView.as_view()(request)
+        # Chủ xe: Chỉ xem lịch của xe mình
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(vehicle__owner=self.request.user)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        inspection = self.get_object()
+
+        context['is_staff'] = self.request.user.is_staff
+        context['can_update'] = (
+            self.request.user.is_staff and
+            inspection.status in ['pending', 'in_progress']
+        )
+        context['can_cancel'] = (
+            not self.request.user.is_staff and
+            inspection.vehicle.owner == self.request.user and
+            inspection.status == 'pending'
+        )
+        context['can_pay'] = (
+            not self.request.user.is_staff and
+            inspection.vehicle.owner == self.request.user and
+            inspection.fee and
+            not inspection.is_fee_paid
+        )
+
+        # Status badge
+        inspection.status_badge_class = inspection.get_status_badge_class()
+        inspection.status_label = inspection.get_status_label()
+
+        context['page_title'] = f'Lịch đăng kiểm {inspection.vehicle.license_plate}'
+        return context
+
+
+class InspectionResultView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    """
+    Cập nhật kết quả đăng kiểm (cho cán bộ)
+    - Nhập lỗi, kết quả, phí, số giấy chứng nhận
+    - Chỉ cán bộ mới được cập nhật
+    """
+    model = Inspection
+    form_class = InspectionResultForm
+    template_name = 'vehicle_inspection/inspection_result_form.html'
+    success_url = reverse_lazy('vehicle_inspection:inspection_list')
+
+    def test_func(self):
+        """Chỉ cán bộ mới được cập nhật"""
+        return self.request.user.is_staff
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = f'Cập nhật kết quả đăng kiểm {self.get_object().vehicle.license_plate}'
+        context['inspection'] = self.get_object()
+        return context
+
+    def form_valid(self, form):
+        form.instance.inspector = self.request.user
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f'Đã cập nhật kết quả đăng kiểm thành công.'
+        )
+        return response
+
+    def handle_no_permission(self):
+        messages.error(self.request, 'Chỉ cán bộ mới có quyền cập nhật kết quả.')
+        return redirect('vehicle_inspection:inspection_list')
+
 
 @login_required
 def cancel_inspection(request, pk):
-    insp = get_object_or_404(Inspection, pk=pk, vehicle__owner=request.user)
-    if insp.status == 'pending':
-        insp.status = 'cancelled'
-        insp.save()
-        messages.success(request,'Đã hủy lịch đăng kiểm.')
-    return redirect('vehicle_inspection:inspection_list')
+    """
+    Hủy lịch đăng kiểm (cho chủ xe)
+    - Chỉ hủy được lịch ở trạng thái pending
+    """
+    inspection = get_object_or_404(
+        Inspection,
+        pk=pk,
+        vehicle__owner=request.user,
+        status='pending'
+    )
+
+    if request.method == 'POST':
+        inspection.status = 'cancelled'
+        inspection.save()
+        messages.success(request, 'Đã hủy lịch đăng kiểm.')
+        return redirect('vehicle_inspection:inspection_list')
+
+    context = {
+        'inspection': inspection,
+        'page_title': 'Xác nhận hủy lịch',
+    }
+    return redirect('vehicle_inspection:inspection_detail', pk=pk)
+
 
 @login_required
-@staff_required
-def update_inspection(request, pk):
-    insp = get_object_or_404(Inspection, pk=pk)
-    if request.method=='POST':
-        insp.status = request.POST.get('status', insp.status)
-        insp.technical_notes = request.POST.get('technical_notes','')
-        insp.defects = request.POST.get('defects','')
-        insp.repair_required = request.POST.get('repair_required','')
-        if request.POST.get('certificate_number'):
-            insp.certificate_number = request.POST.get('certificate_number')
-        insp.inspector = request.user
-        insp.save()
-        messages.success(request,'Đã cập nhật kết quả đăng kiểm.')
-    return redirect('vehicle_inspection:inspection_list')
+def pay_inspection_fee(request, pk):
+    """
+    Thanh toán phí đăng kiểm (cho chủ xe)
+    - Chỉ thanh toán khi cán bộ đã nhập phí
+    """
+    inspection = get_object_or_404(
+        Inspection,
+        pk=pk,
+        vehicle__owner=request.user
+    )
 
-@login_required
-def pay_fee(request, pk):
-    insp = get_object_or_404(Inspection, pk=pk, vehicle__owner=request.user)
-    insp.is_fee_paid = True
-    insp.save()
-    messages.success(request,'Đã xác nhận thanh toán.')
-    return redirect('vehicle_inspection:inspection_list')
+    # Kiểm tra điều kiện thanh toán
+    if not inspection.fee or inspection.fee == 0:
+        messages.error(request, 'Cán bộ chưa nhập phí đăng kiểm.')
+        return redirect('vehicle_inspection:inspection_detail', pk=pk)
+
+    if inspection.is_fee_paid:
+        messages.warning(request, 'Phí đã được thanh toán rồi.')
+        return redirect('vehicle_inspection:inspection_detail', pk=pk)
+
+    if request.method == 'POST':
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            inspection.is_fee_paid = True
+            inspection.save()
+            messages.success(
+                request,
+                f'Đã xác nhận thanh toán phí {inspection.fee:,.0f} VNĐ.'
+            )
+            return redirect('vehicle_inspection:inspection_list')
+    else:
+        form = PaymentForm()
+
+    context = {
+        'inspection': inspection,
+        'form': form,
+        'page_title': 'Thanh toán phí đăng kiểm',
+    }
+    return redirect('vehicle_inspection:inspection_detail', pk=pk)

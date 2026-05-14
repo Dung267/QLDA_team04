@@ -1,91 +1,179 @@
 {% extends "base.html" %}
+
 {% block content %}
-    <style>
+<div class="container-fluid">
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h4 class="fw-bold mb-1">{{ page_title }}</h4>
+      <p class="text-muted mb-0">{{ page_description }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'vehicle_inspection:schedule' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-calendar-plus me-1"></i>Đặt lịch đăng kiểm
+      </a>
+      <a href="{% url 'vehicle_inspection:vehicle_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-circle me-1"></i>Thêm phương tiện
+      </a>
+    </div>
+  </div>
+
+  <!-- Vehicles Table -->
+  {% if vehicles %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">Biển số xe</th>
+              <th>Loại xe</th>
+              <th>Thông tin xe</th>
+              <th>Ngày hết hạn</th>
+              <th>Lịch hẹn gần nhất</th>
+              <th>Trung tâm</th>
+              <th class="pe-4">Trạng thái hạn</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for vehicle in vehicles %}
+            <tr>
+              <!-- Biển số xe -->
+              <td class="ps-4 fw-semibold">
+                <span class="fw-semibold">
+                    {{ vehicle.license_plate }}
+                </span>
+              </td>
+
+              <!-- Loại xe -->
+              <td>
+                <span class="badge bg-light text-dark">
+                  {{ vehicle.get_vehicle_type_display }}
+                </span>
+              </td>
+
+              <!-- Thông tin xe -->
+              <td>
+                <small>
+                  {% if vehicle.brand or vehicle.model %}
+                    {{ vehicle.brand|default:"" }} {{ vehicle.model|default:"" }}
+                    {% if vehicle.year %}({{ vehicle.year }}){% endif %}
+                  {% else %}
+                    <span class="text-muted">Không có thông tin</span>
+                  {% endif %}
+                </small>
+              </td>
+
+              <!-- Ngày hết hạn -->
+              <td>
+                {% if vehicle.inspection_expiry_date %}
+                  <small>{{ vehicle.inspection_expiry_date|date:"d/m/Y" }}</small>
+                {% else %}
+                  <span class="text-muted">Chưa có dữ liệu</span>
+                {% endif %}
+              </td>
+
+              <!-- Lịch hẹn gần nhất -->
+              <td>
+                {% if vehicle.latest_scheduled_date %}
+                  <small>{{ vehicle.latest_scheduled_date|date:"d/m/Y" }}</small>
+                {% else %}
+                  <span class="text-muted">Chưa đặt lịch</span>
+                {% endif %}
+              </td>
+
+              <!-- Trung tâm -->
+              <td>
+                <small>
+                    {% if vehicle.latest_center_name %}
+                    <span>{{ vehicle.latest_center_name }}</span>
+                    {% else %}
+                    <span class="text-muted">Trung tâm Đăng kiểm xe cơ giới 43-01S, Quận Cẩm Lệ</span>
+                    {% endif %}
+                </small>
+                </td>
+              <!-- Status badge -->
+              <td class="pe-4">
+                <span class="badge {{ vehicle.expiry_status.badge_class }}">
+                  {{ vehicle.expiry_status.badge_text }}
+                </span>
+                {% if vehicle.expiry_status.note %}
+                <div class="small {{ vehicle.expiry_status.note_class }} mt-1">
+                  {{ vehicle.expiry_status.note }}
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if is_paginated %}
+  <nav class="mt-4">
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1">Đầu</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Trước</a>
+      </li>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active">
+          <span class="page-link">{{ num }}</span>
+        </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+        </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Tiếp</a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Cuối</a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-car-front" style="font-size: 3rem; color: #ccc;"></i>
+      <p class="text-muted mt-3 mb-3">Bạn chưa có phương tiện nào</p>
+      <a href="{% url 'vehicle_inspection:vehicle_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-circle me-1"></i>Thêm phương tiện mới
+      </a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<style>
   .expiry-alert {
     animation: pulse-alert 1.4s ease-in-out infinite;
   }
 
   @keyframes pulse-alert {
-    0% {
+    0%, 100% {
       transform: scale(1);
     }
     50% {
       transform: scale(1.05);
     }
-    100% {
-      transform: scale(1);
-    }
   }
-    </style>
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div>
-            <h4 class="fw-bold mb-1">{{ page_title }}</h4>
-            <p class="text-muted mb-0">Theo doi han dang kiem phuong tien tai thanh pho Da Nang.</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'vehicle_inspection:schedule' %}"
-               class="btn btn-outline-primary btn-sm"><i class="bi bi-calendar-plus me-1"></i>Dat lich dang kiem</a>
-            <a href="{% url 'vehicle_inspection:vehicle_create' %}"
-               class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>Them phuong tien</a>
-        </div>
-    </div>
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3">Bien so</th>
-                            <th>Loai xe</th>
-                            <th>Thong tin xe</th>
-                            <th>Ngay het han</th>
-                            <th>Lich dat gan nhat</th>
-                            <th>Trung tam</th>
-                            <th class="pe-3">Trang thai</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for vehicle in vehicles %}
-                            <tr>
-                                <td class="ps-3 fw-semibold">{{ vehicle.license_plate }}</td>
-                                <td>{{ vehicle.get_vehicle_type_display }}</td>
-                                <td>{{ vehicle.brand|default:"-" }} {{ vehicle.model|default:"" }}</td>
-                                <td>
-                                    {% if vehicle.inspection_expiry %}
-                                        {{
-                                        vehicle.inspection_expiry|date:"d/m/Y" }}
-                                    {% else %}
-                                        <span class="text-muted">Chua co du lieu</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if vehicle.latest_schedule_date %}
-                                        {{
-                                        vehicle.latest_schedule_date|date:"d/m/Y" }}
-                                    {% else %}
-                                        <span class="text-muted">Chua dat lich</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ vehicle.latest_center_name|default:"Trung tam Dang kiem xe co gioi 43-01S, Quan Cam Le" }}</td>
-                                <td class="pe-3">
-                                    <span class="badge {{ vehicle.expiry_badge_class }} {% if vehicle.expiry_is_alert %}expiry-alert{% endif %}">{{ vehicle.expiry_badge_text }}</span>
-                                    {% if vehicle.expiry_note %}
-                                        <div class="small {{ vehicle.expiry_note_class }} mt-1">{{ vehicle.expiry_note }}</div>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="7" class="text-center py-5">
-                                    <div class="text-muted mb-2">Ban chua co phuong tien nao.</div>
-                                    <a href="{% url 'vehicle_inspection:vehicle_create' %}"
-                                       class="btn btn-sm btn-primary">Them phuong tien moi</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+</style>
 {% endblock %}
