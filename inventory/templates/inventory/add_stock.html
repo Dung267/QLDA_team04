@@ -1,31 +1,241 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Add Stock" }}</h4>
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'inventory:material_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-box-arrow-in-down text-success me-2"></i>Nhập / Xuất kho vật tư
+  </h4>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Add Stock</div></div>
-{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+
+        {# Toggle nhập / xuất #}
+        <div class="d-flex gap-0 mb-4 rounded overflow-hidden border">
+          <button type="button" id="btn-in" onclick="setType('in')"
+                  class="btn btn-success flex-grow-1 rounded-0">
+            <i class="bi bi-box-arrow-in-down me-2"></i>Nhập kho
+          </button>
+          <button type="button" id="btn-out" onclick="setType('out')"
+                  class="btn btn-outline-warning flex-grow-1 rounded-0">
+            <i class="bi bi-box-arrow-up me-2"></i>Xuất kho
+          </button>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {# transaction_type: 'in' / 'out' / 'adjust' – khớp với model #}
+          <input type="hidden" name="transaction_type" id="transaction_type" value="in">
+
+          {# Vật tư #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Vật tư <span class="text-danger">*</span>
+            </label>
+            <select name="material" id="sel-material"
+                    class="form-select {% if form.material.errors %}is-invalid{% endif %}"
+                    required onchange="updateMaterialInfo(this)">
+              <option value="">-- Chọn vật tư --</option>
+              {% for mat in material_list %}
+              <option value="{{ mat.pk }}"
+                      data-unit="{{ mat.get_unit_display }}"
+                      data-stock="{{ mat.current_stock }}"
+                      data-min="{{ mat.min_stock }}"
+                      data-price="{{ mat.unit_price|default:0 }}"
+                      {% if preselected_material == mat.pk %}selected{% endif %}>
+                [{{ mat.code }}] {{ mat.name }} (Tồn: {{ mat.current_stock }} {{ mat.get_unit_display }})
+              </option>
+              {% endfor %}
+            </select>
+            {% if form.material.errors %}
+            <div class="invalid-feedback">{{ form.material.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          {# Thông tin tồn kho hiện tại (dynamic) #}
+          <div id="material-info" class="alert alert-light border mb-3 py-2" style="display:none;font-size:.84rem">
+            <div class="row g-2">
+              <div class="col-4">
+                <div class="text-muted">Tồn hiện tại</div>
+                <div class="fw-bold" id="info-stock">—</div>
+              </div>
+              <div class="col-4">
+                <div class="text-muted">Tồn tối thiểu</div>
+                <div class="fw-bold" id="info-min">—</div>
+              </div>
+              <div class="col-4">
+                <div class="text-muted">Đơn vị</div>
+                <div class="fw-bold" id="info-unit">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            {# quantity #}
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">
+                Số lượng <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <input type="number" name="quantity" id="inp-qty" min="0.01" step="0.01"
+                       class="form-control {% if form.quantity.errors %}is-invalid{% endif %}"
+                       value="{{ form.quantity.value|default:'' }}"
+                       required oninput="calcTotal()">
+                <span class="input-group-text" id="unit-label">—</span>
+              </div>
+              {% if form.quantity.errors %}
+              <div class="text-danger small mt-1">{{ form.quantity.errors.0 }}</div>
+              {% endif %}
+            </div>
+            {# unit_price #}
+            <div class="col-md-7">
+              <label class="form-label fw-semibold">
+                Đơn giá (₫) <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <input type="number" name="unit_price" id="inp-price" min="0" step="1000"
+                       class="form-control {% if form.unit_price.errors %}is-invalid{% endif %}"
+                       value="{{ form.unit_price.value|default:'' }}"
+                       required oninput="calcTotal()">
+                <span class="input-group-text">₫</span>
+              </div>
+              {% if form.unit_price.errors %}
+              <div class="text-danger small mt-1">{{ form.unit_price.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Thành tiền (hiển thị, không lưu DB – model không có field này) #}
+          <div class="alert alert-primary d-flex justify-content-between align-items-center py-2 mb-3"
+               style="font-size:.9rem">
+            <span><i class="bi bi-calculator me-2"></i>Thành tiền (tham khảo):</span>
+            <strong id="total-display">0 ₫</strong>
+          </div>
+
+          {# invoice_number – field của model gốc #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Số hóa đơn</label>
+            <input type="text" name="invoice_number" maxlength="50"
+                   class="form-control form-control-sm"
+                   value="{{ form.invoice_number.value|default:'' }}"
+                   placeholder="VD: HD-2024-001">
+          </div>
+
+          {# reason – field của model gốc #}
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">Lý do</label>
+            <textarea name="reason" rows="2" class="form-control form-control-sm"
+                      placeholder="Lý do nhập/xuất, bảo trì, thay thế...">{{ form.reason.value|default:'' }}</textarea>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{% url 'inventory:material_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x me-1"></i>Hủy
+            </a>
+            <button type="submit" class="btn btn-success" id="submit-btn">
+              <i class="bi bi-box-arrow-in-down me-1"></i>Xác nhận nhập kho
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {# Giao dịch gần đây #}
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-bold py-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history text-info me-2"></i>Giao dịch gần đây</span>
+        <a href="{% url 'inventory:transactions' %}" class="btn btn-link btn-sm p-0 small">Xem tất cả</a>
+      </div>
+      <div class="card-body p-0">
+        {% for tx in recent_transactions %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0
+            {% if tx.transaction_type == 'in' %}bg-success bg-opacity-10 text-success
+            {% else %}bg-warning bg-opacity-10 text-warning{% endif %}"
+               style="width:36px;height:36px">
+            <i class="bi bi-box-arrow-{% if tx.transaction_type == 'in' %}in-down{% else %}up{% endif %}"></i>
+          </div>
+          <div class="flex-grow-1 min-width-0">
+            <div class="small fw-semibold text-truncate">{{ tx.material.name }}</div>
+            <div class="text-muted" style="font-size:.75rem">
+              {% if tx.transaction_type == 'in' %}+{% else %}-{% endif %}{{ tx.quantity }}
+              {{ tx.material.get_unit_display }}
+              · {{ tx.created_at|timesince }} trước
+            </div>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <span class="badge {% if tx.transaction_type == 'in' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+              {% if tx.transaction_type == 'in' %}Nhập{% else %}Xuất{% endif %}
+            </span>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4 small">Chưa có giao dịch nào</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Đọc loại mặc định từ session (set bởi export_stock view) hoặc mặc định 'in'
+const defaultType = document.getElementById('transaction_type').value || 'in';
+
+function setType(type) {
+  document.getElementById('transaction_type').value = type;
+  const isIn = type === 'in';
+
+  document.getElementById('btn-in').className =
+    `btn flex-grow-1 rounded-0 ${isIn ? 'btn-success' : 'btn-outline-success'}`;
+  document.getElementById('btn-out').className =
+    `btn flex-grow-1 rounded-0 ${isIn ? 'btn-outline-warning' : 'btn-warning'}`;
+
+  const submitBtn = document.getElementById('submit-btn');
+  if (isIn) {
+    submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-down me-1"></i>Xác nhận nhập kho';
+    submitBtn.className = 'btn btn-success';
+  } else {
+    submitBtn.innerHTML = '<i class="bi bi-box-arrow-up me-1"></i>Xác nhận xuất kho';
+    submitBtn.className = 'btn btn-warning';
+  }
+}
+
+function updateMaterialInfo(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const info = document.getElementById('material-info');
+  if (!opt.value) { info.style.display = 'none'; return; }
+
+  info.style.display = '';
+  document.getElementById('info-stock').textContent = opt.dataset.stock + ' ' + opt.dataset.unit;
+  document.getElementById('info-min').textContent   = opt.dataset.min  + ' ' + opt.dataset.unit;
+  document.getElementById('info-unit').textContent  = opt.dataset.unit;
+  document.getElementById('unit-label').textContent = opt.dataset.unit;
+
+  const priceInput = document.getElementById('inp-price');
+  if (!priceInput.value && parseFloat(opt.dataset.price) > 0) {
+    priceInput.value = opt.dataset.price;
+    calcTotal();
+  }
+}
+
+function calcTotal() {
+  const qty   = parseFloat(document.getElementById('inp-qty').value)   || 0;
+  const price = parseFloat(document.getElementById('inp-price').value) || 0;
+  document.getElementById('total-display').textContent =
+    (qty * price).toLocaleString('vi-VN') + ' ₫';
+}
+
+// Khởi tạo
+setType(defaultType);
+updateMaterialInfo(document.getElementById('sel-material'));
+</script>
 {% endblock %}

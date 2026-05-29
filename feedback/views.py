@@ -1,40 +1,81 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.messages.views import SuccessMessageMixin
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
+from datetime import datetime
 from .models import SystemFeedback
+from .forms import FeedbackForm
 from accounts.decorators import staff_required
 
 @login_required
 def feedback_list(request):
     qs = SystemFeedback.objects.filter(status__in=['new','reviewed','resolved'])
-    rating = request.GET.get('rating','')
-    if rating: qs = qs.filter(rating=rating)
-    paginator = Paginator(qs, 20)
-    page = paginator.get_page(request.GET.get('page',1))
-    avg_rating = SystemFeedback.objects.aggregate(avg=Avg('rating'))['avg']
-    return render(request,'feedback/list.html',{
-        'page_obj':page,'avg_rating':avg_rating,'page_title':'Phản hồi & Đánh giá'})
+    rating = request.GET.get('rating', '').strip()
+    keyword = request.GET.get('q', '').strip()
+    from_date = request.GET.get('from_date', '').strip()
+    to_date = request.GET.get('to_date', '').strip()
 
-@login_required
-def feedback_create(request):
-    if request.method=='POST':
-        rating = int(request.POST.get('rating',3))
-        content = request.POST.get('content','').strip()
-        is_anonymous = request.POST.get('is_anonymous')=='on'
-        category = request.POST.get('category','')
-        if not content:
-            messages.error(request,'Vui lòng nhập nội dung phản hồi.')
-            return redirect('feedback:create')
-        SystemFeedback.objects.create(
-            author=None if is_anonymous else request.user,
-            is_anonymous=is_anonymous, rating=rating,
-            content=content, category=category
+    if rating:
+        qs = qs.filter(rating=rating)
+
+    if keyword:
+        qs = qs.filter(
+            Q(content__icontains=keyword) |
+            Q(category__icontains=keyword)
         )
-        messages.success(request,'Cảm ơn bạn đã gửi phản hồi!')
-        return redirect('feedback:list')
-    return render(request,'feedback/form.html',{'page_title':'Gửi phản hồi'})
+
+    if from_date:
+        try:
+            start_date = datetime.strptime(from_date, '%Y-%m-%d').date()
+            qs = qs.filter(created_at__date__gte=start_date)
+        except ValueError:
+            messages.warning(request, 'Ngày bắt đầu không hợp lệ. Định dạng đúng: YYYY-MM-DD.')
+
+    if to_date:
+        try:
+            end_date = datetime.strptime(to_date, '%Y-%m-%d').date()
+            qs = qs.filter(created_at__date__lte=end_date)
+        except ValueError:
+            messages.warning(request, 'Ngày kết thúc không hợp lệ. Định dạng đúng: YYYY-MM-DD.')
+
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get('page', 1))
+    avg_rating = SystemFeedback.objects.aggregate(avg=Avg('rating'))['avg']
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+
+    return render(request, 'feedback/list.html', {
+        'page_obj': page,
+        'avg_rating': avg_rating,
+        'page_title': 'Phản hồi & Đánh giá',
+        'selected_rating': rating,
+        'keyword': keyword,
+        'from_date': from_date,
+        'to_date': to_date,
+        'query_string': query_params.urlencode(),
+    })
+
+class FeedbackCreateView(SuccessMessageMixin, CreateView):
+    model = SystemFeedback
+    form_class = FeedbackForm
+    template_name = 'feedback/systemfeedback_form.html'
+    success_url = reverse_lazy('feedback:list')
+    success_message = 'Cảm ơn bạn đã gửi phản hồi về hệ thống hạ tầng đô thị Đà Nẵng.'
+
+    def form_valid(self, form):
+        if self.request.user.is_authenticated:
+            form.instance.author = self.request.user
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Gửi phản hồi & Đánh giá hệ thống'
+        return context
 
 @login_required
 def feedback_detail(request, pk):

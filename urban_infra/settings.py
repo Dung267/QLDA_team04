@@ -5,20 +5,47 @@ Hệ thống Quản lý Hạ tầng Đô thị
 
 from pathlib import Path
 import os
+from urllib.parse import urlparse
+
+from celery.schedules import crontab
 from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production-!!!')
-DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = ['*']
+def bool_config(name, default=False):
+    value = config(name, default=str(default))
+    if isinstance(value, bool):
+        return value
+    value = str(value).strip().lower()
+    if value in {'1', 'true', 'yes', 'on', 'dev', 'development'}:
+        return True
+    if value in {'0', 'false', 'no', 'off', 'prod', 'production', 'release'}:
+        return False
+    return bool(default)
 
-CSRF_TRUSTED_ORIGINS = [
+
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production-!!!')
+DEBUG = bool_config('DEBUG', default=True)
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in config('ALLOWED_HOSTS', default='*').split(',')
+    if host.strip()
+]
+
+DEFAULT_CSRF_TRUSTED_ORIGINS = [
     'https://*.trycloudflare.com',
     'https://urban-infra.duckdns.org',
-    'https://urbaninfraqldateam04.us.kg'
+    'https://urbaninfraqldateam04.us.kg',
     'http://localhost:8000',
 ]
+EXTRA_CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in config('CSRF_TRUSTED_ORIGINS', default='').split(',')
+    if origin.strip()
+]
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(
+    DEFAULT_CSRF_TRUSTED_ORIGINS + EXTRA_CSRF_TRUSTED_ORIGINS
+))
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -92,12 +119,45 @@ TEMPLATES = [
 WSGI_APPLICATION = 'urban_infra.wsgi.application'
 ASGI_APPLICATION = 'urban_infra.asgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = config('DATABASE_URL', default='')
+
+if DATABASE_URL:
+    parsed_db = urlparse(DATABASE_URL)
+    scheme = parsed_db.scheme.lower()
+    engine = {
+        'postgres': 'django.db.backends.postgresql',
+        'postgresql': 'django.db.backends.postgresql',
+        'mysql': 'django.db.backends.mysql',
+        'sqlite': 'django.db.backends.sqlite3',
+    }.get(scheme)
+
+    if engine == 'django.db.backends.sqlite3':
+        DATABASES = {
+            'default': {
+                'ENGINE': engine,
+                'NAME': parsed_db.path.lstrip('/') or str(BASE_DIR / 'db.sqlite3'),
+            }
+        }
+    elif engine:
+        DATABASES = {
+            'default': {
+                'ENGINE': engine,
+                'NAME': parsed_db.path.lstrip('/'),
+                'USER': parsed_db.username or '',
+                'PASSWORD': parsed_db.password or '',
+                'HOST': parsed_db.hostname or '',
+                'PORT': str(parsed_db.port or ''),
+            }
+        }
+    else:
+        raise ValueError(f'Unsupported DATABASE_URL scheme: {scheme}')
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
 
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/accounts/login/'
@@ -148,6 +208,18 @@ REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 300
+CELERY_BEAT_SCHEDULE = {
+    'sync-danang-weather-every-30-minutes': {
+        'task': 'weather.tasks.sync_danang_weather',
+        'schedule': 30 * 60,
+    },
+    'notify-expiring-vehicle-inspections-daily': {
+        'task': 'vehicle_inspection.tasks.notify_expiring_inspections',
+        'schedule': crontab(hour=8, minute=0),
+    },
+}
 
 # Channels
 CHANNEL_LAYERS = {
@@ -181,5 +253,9 @@ OTP_VALIDITY_MINUTES = 5
 SYSTEM_NAME = 'Hệ thống Quản lý Hạ tầng Đô thị'
 SYSTEM_SHORT_NAME = 'URBAN INFRA'
 SYSTEM_VERSION = '1.0.0'
+
+# Weather API
+OPENWEATHER_API_KEY = config('OPENWEATHER_API_KEY', default='')
+WEATHER_ALERT_RAIN_MM = config('WEATHER_ALERT_RAIN_MM', default=50, cast=float)
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000').split(',')

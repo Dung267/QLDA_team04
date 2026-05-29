@@ -1,31 +1,314 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Contract Detail" }}</h4>
+
+{# ── Header ── #}
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'contracts:contract_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="flex-grow-1">
+    <h4 class="fw-bold mb-0">{{ contract.title }}</h4>
+    <div class="text-muted small">
+      Số HĐ: <code>{{ contract.contract_number }}</code> &middot;
+      Tạo bởi <strong>{{ contract.created_by.get_full_name|default:contract.created_by.username|default:"—" }}</strong>
+      lúc {{ contract.created_at|date:"d/m/Y" }}
+    </div>
+  </div>
+  {% if user.is_staff_member %}
+  <div class="ms-3 d-flex gap-2">
+    {% if contract.document %}
+    <a href="{{ contract.document.url }}" class="btn btn-sm btn-outline-secondary" title="Tải tài liệu HĐ" download>
+      <i class="bi bi-download me-1"></i>Tài liệu
+    </a>
+    {% endif %}
+    <a href="{% url 'contracts:contract_edit' contract.pk %}" class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-pencil me-1"></i>Chỉnh sửa
+    </a>
+  </div>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Contract Detail</div></div>
-{% endif %}
+
+{# ── Stat cards ── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-2">Trạng thái</div>
+      {% if contract.status == 'active' %}
+        <span class="badge bg-info text-dark fs-6">Đang thực hiện</span>
+      {% elif contract.status == 'completed' %}
+        <span class="badge bg-success fs-6">Hoàn thành</span>
+      {% elif contract.status == 'terminated' %}
+        <span class="badge bg-danger fs-6">Chấm dứt</span>
+      {% elif contract.status == 'expired' %}
+        <span class="badge bg-secondary fs-6">Hết hạn</span>
+      {% else %}
+        <span class="badge bg-secondary fs-6">Nháp</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Giá trị hợp đồng</div>
+      <div class="fw-bold text-primary">{{ contract.value|floatformat:0 }} ₫</div>
+      {% if contract.guaranty %}
+      <div class="text-muted" style="font-size:.75rem">Bảo lãnh: {{ contract.guaranty|floatformat:0 }} ₫</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Tiến độ</div>
+      <div class="fw-bold fs-5">{{ contract.progress_percent|default:0 }}%</div>
+      <div class="progress mx-3 mt-1" style="height:5px">
+        <div class="progress-bar
+          {% if contract.progress_percent >= 100 %}bg-success
+          {% elif contract.progress_percent >= 60 %}bg-primary
+          {% else %}bg-warning{% endif %}"
+          style="width:{% firstof contract.progress_percent 0 %}%">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="small text-muted mb-1">Thời hạn HĐ</div>
+      <div class="small text-muted">{{ contract.start_date|date:"d/m/Y" }}</div>
+      <div class="fw-bold">→ {{ contract.end_date|date:"d/m/Y" }}</div>
+    </div>
+  </div>
+</div>
+
+{# ── Tabs ── #}
+<ul class="nav nav-tabs mb-3" id="contractTabs">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-info">
+      <i class="bi bi-info-circle me-1"></i>Thông tin chung
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-terms">
+      <i class="bi bi-card-text me-1"></i>Điều khoản
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-docs">
+      <i class="bi bi-paperclip me-1"></i>Tài liệu
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  {# ── Tab 1: Thông tin chung ── #}
+  <div class="tab-pane fade show active" id="tab-info">
+    <div class="row g-4">
+
+      <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-header bg-transparent fw-bold py-3">
+            <i class="bi bi-file-earmark-text text-primary me-2"></i>Thông tin hợp đồng
+          </div>
+          <div class="card-body">
+            <dl class="row mb-0" style="font-size:.875rem">
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Số hợp đồng</dt>
+              <dd class="col-sm-7 py-2 border-bottom"><code>{{ contract.contract_number }}</code></dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Tiêu đề</dt>
+              <dd class="col-sm-7 py-2 border-bottom fw-semibold">{{ contract.title }}</dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Mô tả</dt>
+              <dd class="col-sm-7 py-2 border-bottom">{{ contract.description|default:"—" }}</dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Ngày bắt đầu</dt>
+              <dd class="col-sm-7 py-2 border-bottom">{{ contract.start_date|date:"d/m/Y" }}</dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Ngày kết thúc</dt>
+              <dd class="col-sm-7 py-2 border-bottom">{{ contract.end_date|date:"d/m/Y" }}</dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Giá trị HĐ</dt>
+              <dd class="col-sm-7 py-2 border-bottom fw-semibold text-primary">{{ contract.value|floatformat:0 }} ₫</dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Bảo lãnh</dt>
+              <dd class="col-sm-7 py-2 border-bottom">
+                {% if contract.guaranty %}{{ contract.guaranty|floatformat:0 }} ₫{% else %}—{% endif %}
+              </dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Tiến độ</dt>
+              <dd class="col-sm-7 py-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height:6px">
+                    <div class="progress-bar
+                      {% if contract.progress_percent >= 100 %}bg-success
+                      {% elif contract.progress_percent >= 60 %}bg-primary
+                      {% else %}bg-warning{% endif %}"
+                      style="width:{{ contract.progress_percent|default:0 }}%">
+                    </div>
+                  </div>
+                  <span class="fw-semibold text-primary" style="min-width:34px;font-size:.82rem">
+                    {{ contract.progress_percent|default:0 }}%
+                  </span>
+                </div>
+              </dd>
+
+              {#
+                Model Tender có: result_contract = OneToOneField(Contract, related_name='tender')
+                Nên từ contract instance, truy cập gói thầu liên kết qua: contract.tender
+                (Django tự tạo reverse accessor tên là related_name='tender')
+              #}
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Gói thầu liên kết</dt>
+              <dd class="col-sm-7 py-2 border-bottom">
+                {% if contract.tender %}
+                  <span class="badge bg-info text-dark">
+                    <i class="bi bi-hammer me-1"></i>{{ contract.tender.title|truncatechars:40 }}
+                  </span>
+                {% else %}—{% endif %}
+              </dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2 border-bottom">Người phê duyệt</dt>
+              <dd class="col-sm-7 py-2 border-bottom">
+                {% if contract.approved_by %}
+                  {{ contract.approved_by.get_full_name|default:contract.approved_by.username }}
+                {% else %}
+                  <span class="text-muted">Chưa duyệt</span>
+                {% endif %}
+              </dd>
+
+              <dt class="col-sm-5 text-muted fw-normal py-2">Ngày tạo / Cập nhật</dt>
+              <dd class="col-sm-7 py-2 text-muted" style="font-size:.8rem">
+                {{ contract.created_at|date:"d/m/Y H:i" }} / {{ contract.updated_at|date:"d/m/Y H:i" }}
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-transparent fw-bold py-3">
+            <i class="bi bi-building text-primary me-2"></i>Thông tin nhà thầu
+          </div>
+          <div class="card-body">
+            {% if contract.contractor %}
+            <div class="fw-bold mb-3 fs-6">{{ contract.contractor.name }}</div>
+            <dl class="row mb-0 small">
+              <dt class="col-5 text-muted fw-normal py-1 border-bottom">Mã số thuế</dt>
+              <dd class="col-7 py-1 border-bottom">{{ contract.contractor.tax_code|default:"—" }}</dd>
+
+              <dt class="col-5 text-muted fw-normal py-1 border-bottom">Người đại diện</dt>
+              <dd class="col-7 py-1 border-bottom">{{ contract.contractor.representative|default:"—" }}</dd>
+
+              <dt class="col-5 text-muted fw-normal py-1 border-bottom">Điện thoại</dt>
+              <dd class="col-7 py-1 border-bottom">
+                {% if contract.contractor.phone %}
+                  <a href="tel:{{ contract.contractor.phone }}" class="text-decoration-none">{{ contract.contractor.phone }}</a>
+                {% else %}—{% endif %}
+              </dd>
+
+              <dt class="col-5 text-muted fw-normal py-1 border-bottom">Email</dt>
+              <dd class="col-7 py-1 border-bottom">
+                {% if contract.contractor.email %}
+                  <a href="mailto:{{ contract.contractor.email }}" class="text-decoration-none small">{{ contract.contractor.email }}</a>
+                {% else %}—{% endif %}
+              </dd>
+
+              <dt class="col-5 text-muted fw-normal py-1">Địa chỉ</dt>
+              <dd class="col-7 py-1">{{ contract.contractor.address|default:"—" }}</dd>
+            </dl>
+            <div class="mt-3">
+              {% if contract.contractor.is_active %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                  <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Đang hoạt động
+                </span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                  <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>Ngừng hoạt động
+                </span>
+              {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-building-x display-6 d-block mb-2 opacity-50"></i>
+              Chưa có thông tin nhà thầu
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if contract.document %}
+        <div class="card border-0 shadow-sm mt-3">
+          <div class="card-header bg-transparent fw-bold py-3">
+            <i class="bi bi-file-earmark-arrow-down text-warning me-2"></i>Tài liệu hợp đồng
+          </div>
+          <div class="card-body">
+            <div class="d-flex align-items-center gap-3">
+              <i class="bi bi-file-earmark-pdf fs-2 text-danger flex-shrink-0"></i>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-semibold text-truncate small">{{ contract.document.name|cut:"contracts/" }}</div>
+              </div>
+              <a href="{{ contract.document.url }}" download class="btn btn-sm btn-outline-primary flex-shrink-0">
+                <i class="bi bi-download"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  {# ── Tab 2: Điều khoản ── #}
+  <div class="tab-pane fade" id="tab-terms">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-card-text text-primary me-2"></i>Điều khoản hợp đồng
+      </div>
+      <div class="card-body">
+        {% if contract.terms %}
+        <div class="p-3 bg-light rounded" style="white-space:pre-wrap;font-size:.9rem;line-height:1.7">{{ contract.terms }}</div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-file-text display-6 d-block mb-2 opacity-50"></i>
+          Chưa có điều khoản nào được ghi nhận
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Tab 3: Tài liệu ── #}
+  <div class="tab-pane fade" id="tab-docs">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-paperclip text-primary me-2"></i>Tài liệu đính kèm
+      </div>
+      <div class="card-body">
+        {% if contract.document %}
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="card border h-100">
+              <div class="card-body d-flex align-items-center gap-3 py-2">
+                <i class="bi bi-file-earmark-pdf fs-3 text-danger flex-shrink-0"></i>
+                <div class="min-w-0 flex-grow-1">
+                  <div class="small fw-semibold text-truncate">{{ contract.document.name|cut:"contracts/" }}</div>
+                  <div class="text-muted" style="font-size:.75rem">Tài liệu hợp đồng chính</div>
+                </div>
+                <a href="{{ contract.document.url }}" download class="btn btn-link btn-sm p-0 ms-auto" title="Tải xuống">
+                  <i class="bi bi-download"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-folder2-open display-6 d-block mb-2 opacity-50"></i>
+          Chưa có tài liệu nào được đính kèm
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

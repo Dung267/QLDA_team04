@@ -1,31 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Current Weather" }}</h4>
-</div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Current Weather</div></div>
-{% endif %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h4 class="fw-bold mb-1">{{ page_title }}</h4>
+            <p class="text-muted mb-0">Thoi tiet hien tai khu vuc {{ location }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <form method="post" action="{% url 'weather:sync' %}">
+                {% csrf_token %}
+                <input type="hidden" name="district" value="{{ district }}">
+                <button type="submit" class="btn btn-outline-success btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Cap nhat tu API
+                </button>
+            </form>
+            <a href="{% url 'weather:forecast' %}?district={{ district }}"
+               class="btn btn-outline-primary btn-sm">Xem du bao 7 ngay</a>
+        </div>
+    </div>
+    {% include "weather/_district_filter.html" %}
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            {% if latest %}
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi {{ latest.icon_class }} fs-1 text-warning"></i>
+                        <div>
+                            <p class="text-muted mb-1">{{ latest.location }} - cap nhat luc {{ latest.recorded_at|date:"H:i d/m/Y" }}</p>
+                            <div class="display-1 fw-bold lh-1">{{ latest.temperature|floatformat:0 }}&deg;C</div>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        <span class="badge text-bg-primary">Do am {{ latest.humidity }}%</span>
+                        <span class="badge text-bg-info">Luong mua {{ latest.rain_mm|floatformat:1 }} mm</span>
+                        <span class="badge text-bg-secondary">Gio {{ latest.wind_speed|floatformat:0 }} km/h</span>
+                    </div>
+                </div>
+                {% if latest.is_dangerous %}
+                    <div class="alert alert-danger mt-3 mb-0 d-flex align-items-center"
+                         role="alert">
+                        <span class="spinner-grow spinner-grow-sm me-2" aria-hidden="true"></span>
+                        <div>
+                            <strong>Canh bao thoi tiet cuc doan:</strong> {{ alert_message }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    Chua co du lieu thoi tiet thuc te. He thong dang hien thi du bao mau cho Da Nang.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% include "weather/forecast.html" %}
 {% endblock %}

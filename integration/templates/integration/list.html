@@ -1,31 +1,536 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"List" }}</h4>
+<div class="container-fluid">
+  <!-- Header Section -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold mb-1">Quản lý Tích hợp API</h4>
+      <p class="text-muted mb-0">Kết nối với các dịch vụ bên thứ ba</p>
+    </div>
+    {% if user.is_staff %}
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addIntegrationModal">
+      <i class="bi bi-plus-circle me-2"></i>Thêm Tích hợp
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Health Status Summary -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card bg-light">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-1">Tích hợp Hoạt động</h6>
+              <h3 class="fw-bold text-success">{{ active_count }}</h3>
+            </div>
+            <i class="bi bi-check-circle" style="font-size: 1.5rem; color: #198754;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-light">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-1">Lỗi Kết nối</h6>
+              <h3 class="fw-bold text-danger">{{ error_count }}</h3>
+            </div>
+            <i class="bi bi-exclamation-circle" style="font-size: 1.5rem; color: #dc3545;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-light">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-1">Tổng Tích hợp</h6>
+              <h3 class="fw-bold">{{ total_count }}</h3>
+            </div>
+            <i class="bi bi-plug" style="font-size: 1.5rem; opacity: 0.5;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Integrations List -->
+  {% if integrations %}
+  <div class="row">
+    {% for integration in integrations %}
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-plug" style="font-size: 1.5rem;"></i>
+            <div>
+              <h6 class="mb-0 fw-bold">{{ integration.name }}</h6>
+              <small class="text-muted">ID: {{ integration.id }}</small>
+            </div>
+          </div>
+          {% with status=integration.status %}
+            {% if status == 'active' %}
+              <span class="badge bg-success">
+                <i class="bi bi-check-circle me-1"></i>Hoạt động
+              </span>
+            {% elif status == 'error' %}
+              <span class="badge bg-danger">
+                <i class="bi bi-exclamation-circle me-1"></i>Lỗi
+              </span>
+            {% else %}
+              <span class="badge bg-secondary">
+                <i class="bi bi-dash-circle me-1"></i>Không hoạt động
+              </span>
+            {% endif %}
+          {% endwith %}
+        </div>
+
+        <div class="card-body">
+          <!-- API Details -->
+          <div class="mb-3">
+            <p class="mb-2">
+              <strong>Endpoint:</strong><br>
+              {% if integration.endpoint %}
+              <code style="font-size: 0.85rem;">{{ integration.endpoint }}</code>
+              {% else %}
+              <span class="text-muted">Chưa cấu hình</span>
+              {% endif %}
+            </p>
+          </div>
+
+          <!-- API Key Display -->
+          {% if integration.api_key %}
+          <div class="mb-3">
+            <p class="mb-2">
+              <strong>API Key:</strong>
+              <div class="input-group input-group-sm">
+                <input type="password" class="form-control" id="apiKey{{ integration.id }}" 
+                       value="{{ integration.api_key }}" readonly style="font-size: 0.8rem;">
+                <button class="btn btn-outline-secondary" type="button" id="toggleBtn{{ integration.id }}" 
+                        onclick="toggleApiKey({{ integration.id }})" title="Hiển thị/Ẩn">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-secondary" type="button" 
+                        onclick="copyToClipboard('apiKey{{ integration.id }}')" title="Copy">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+              </div>
+            </p>
+          </div>
+          {% endif %}
+
+          <!-- Last Sync -->
+          {% if integration.last_sync %}
+          <div class="mb-3">
+            <p class="mb-0">
+              <small>
+                <i class="bi bi-clock-history me-1"></i>
+                <strong>Đồng bộ lần cuối:</strong> 
+                {{ integration.last_sync|date:"d/m/Y H:i:s" }}
+                <span class="badge bg-success">{{ integration.last_sync|timesince }} trước</span>
+              </small>
+            </p>
+          </div>
+          {% endif %}
+
+          <!-- Error Message -->
+          {% if integration.error_message %}
+          <div class="alert alert-danger py-2 mb-3">
+            <small>
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              <strong>Lỗi:</strong> {{ integration.error_message }}
+            </small>
+          </div>
+          {% endif %}
+
+          <!-- Status Indicator -->
+          <div class="mb-3">
+            <div class="d-flex align-items-center gap-2">
+              {% with status=integration.status %}
+                {% if status == 'active' %}
+                  <div class="status-indicator" style="width: 12px; height: 12px; border-radius: 50%; background: #198754;"></div>
+                  <span class="text-success"><strong>Kết nối bình thường</strong></span>
+                {% elif status == 'error' %}
+                  <div class="status-indicator" style="width: 12px; height: 12px; border-radius: 50%; background: #dc3545;"></div>
+                  <span class="text-danger"><strong>Lỗi kết nối</strong></span>
+                {% else %}
+                  <div class="status-indicator" style="width: 12px; height: 12px; border-radius: 50%; background: #6c757d;"></div>
+                  <span class="text-secondary"><strong>Chưa kích hoạt</strong></span>
+                {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer bg-light">
+          <div class="btn-group btn-group-sm w-100" role="group">
+            {% if user.is_staff %}
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" 
+                    data-bs-target="#testConnectionModal{{ integration.id }}" title="Test API">
+              <i class="bi bi-play-circle me-1"></i>Test
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" 
+                    data-bs-target="#editIntegrationModal{{ integration.id }}" title="Chỉnh sửa">
+              <i class="bi bi-pencil me-1"></i>Sửa
+            </button>
+            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" 
+                    data-bs-target="#logsModal{{ integration.id }}" title="Xem logs">
+              <i class="bi bi-file-text me-1"></i>Logs
+            </button>
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" 
+                    data-bs-target="#deleteModal{{ integration.id }}" title="Xóa">
+              <i class="bi bi-trash me-1"></i>Xóa
+            </button>
+            {% else %}
+            <button type="button" class="btn btn-outline-info w-100" data-bs-toggle="modal" 
+                    data-bs-target="#logsModal{{ integration.id }}" title="Xem logs">
+              <i class="bi bi-file-text me-1"></i>Xem Logs
+            </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Test Connection Modal -->
+      {% if user.is_staff %}
+      <div class="modal fade" id="testConnectionModal{{ integration.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Test Kết nối - {{ integration.name }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="alert alert-info">
+                <strong>Endpoint:</strong><br>
+                <code>{{ integration.endpoint }}</code>
+              </div>
+              <p>Nhấn "Test" để kiểm tra kết nối API.</p>
+              <div id="testResult{{ integration.id }}" style="display: none;">
+                <hr>
+                <div id="testStatus{{ integration.id }}"></div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+              <button type="button" class="btn btn-primary" onclick="testConnection({{ integration.id }})">
+                <i class="bi bi-play-circle me-1"></i>Test
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Integration Modal -->
+      <div class="modal fade" id="editIntegrationModal{{ integration.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Chỉnh sửa Tích hợp</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'integration:update' integration.id %}">
+              {% csrf_token %}
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label for="name{{ integration.id }}" class="form-label">Tên tích hợp</label>
+                  <input type="text" class="form-control" id="name{{ integration.id }}" 
+                         name="name" value="{{ integration.name }}" required>
+                </div>
+                <div class="mb-3">
+                  <label for="endpoint{{ integration.id }}" class="form-label">Endpoint URL</label>
+                  <input type="url" class="form-control" id="endpoint{{ integration.id }}" 
+                         name="endpoint" value="{{ integration.endpoint }}" placeholder="https://api.example.com">
+                </div>
+                <div class="mb-3">
+                  <label for="api_key{{ integration.id }}" class="form-label">API Key</label>
+                  <input type="text" class="form-control" id="api_key{{ integration.id }}" 
+                         name="api_key" value="{{ integration.api_key }}" placeholder="Để trống nếu không thay đổi">
+                </div>
+                <div class="mb-3">
+                  <label for="status{{ integration.id }}" class="form-label">Trạng thái</label>
+                  <select class="form-select" id="status{{ integration.id }}" name="status">
+                    <option value="active" {% if integration.status == 'active' %}selected{% endif %}>Hoạt động</option>
+                    <option value="inactive" {% if integration.status == 'inactive' %}selected{% endif %}>Không hoạt động</option>
+                    <option value="error" {% if integration.status == 'error' %}selected{% endif %}>Lỗi</option>
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-check-circle me-1"></i>Lưu
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Webhook Logs Modal -->
+      <div class="modal fade" id="logsModal{{ integration.id }}" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Webhook Logs - {{ integration.name }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              {% if integration.webhook_logs.all %}
+              <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Event</th>
+                      <th>Status</th>
+                      <th>Response Code</th>
+                      <th>Thời gian</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for log in integration.webhook_logs.all|slice:":20" %}
+                    <tr>
+                      <td>
+                        <small>
+                          <code>{{ log.event_type }}</code>
+                        </small>
+                      </td>
+                      <td>
+                        {% if log.is_success %}
+                          <span class="badge bg-success">✓ Thành công</span>
+                        {% else %}
+                          <span class="badge bg-danger">✗ Thất bại</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if log.response_code %}
+                          {% if log.response_code >= 200 and log.response_code < 300 %}
+                            <span class="badge bg-success">{{ log.response_code }}</span>
+                          {% elif log.response_code >= 400 %}
+                            <span class="badge bg-danger">{{ log.response_code }}</span>
+                          {% else %}
+                            <span class="badge bg-warning">{{ log.response_code }}</span>
+                          {% endif %}
+                        {% else %}
+                          <span class="text-muted">-</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <small class="text-muted">{{ log.created_at|date:"d/m/Y H:i" }}</small>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% else %}
+              <p class="text-center text-muted py-3">Chưa có webhook logs</p>
+              {% endif %}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Modal -->
+      {% if user.is_staff %}
+      <div class="modal fade" id="deleteModal{{ integration.id }}" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Xác nhận xóa</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              Bạn có chắc muốn xóa tích hợp "<strong>{{ integration.name }}</strong>" không?<br>
+              <small class="text-muted">Hành động này không thể hoàn tác. Tất cả webhook logs sẽ bị xóa.</small>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+              <form method="post" action="{% url 'integration:delete' integration.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Xóa</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="card">
+    <div class="card-body text-center text-muted py-5">
+      <i class="bi bi-plug" style="font-size: 3rem; opacity: 0.5;"></i>
+      <p class="mt-3 mb-0">Chưa có tích hợp API nào</p>
+      {% if user.is_staff %}
+      <p class="text-sm mt-2">
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addIntegrationModal">
+          Thêm tích hợp đầu tiên
+        </button>
+      </p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang List</div></div>
+
+<!-- Add Integration Modal -->
+{% if user.is_staff %}
+<div class="modal fade" id="addIntegrationModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Thêm Tích hợp API mới</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'integration:create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="addName" class="form-label">Tên tích hợp <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="addName" name="name" 
+                   placeholder="Ví dụ: Google Drive, AWS S3, ..." required>
+            <small class="text-muted">Tên để nhận dạng dịch vụ</small>
+          </div>
+          <div class="mb-3">
+            <label for="addEndpoint" class="form-label">Endpoint URL</label>
+            <input type="url" class="form-control" id="addEndpoint" name="endpoint" 
+                   placeholder="https://api.example.com/v1">
+          </div>
+          <div class="mb-3">
+            <label for="addApiKey" class="form-label">API Key</label>
+            <input type="password" class="form-control" id="addApiKey" name="api_key" 
+                   placeholder="sk_live_...">
+          </div>
+          <div class="alert alert-info">
+            <small>
+              <i class="bi bi-info-circle me-2"></i>
+              Bạn có thể thêm chi tiết sau. Hiện tại chỉ cần điền tên là đủ.
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Thêm
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endif %}
+
+<script>
+  // Toggle API Key visibility
+  function toggleApiKey(integrationId) {
+    const input = document.getElementById('apiKey' + integrationId);
+    const btn = document.getElementById('toggleBtn' + integrationId);
+    
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+    } else {
+      input.type = 'password';
+      btn.innerHTML = '<i class="bi bi-eye"></i>';
+    }
+  }
+
+  // Copy to clipboard
+  function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    element.select();
+    document.execCommand('copy');
+    
+    // Show confirmation
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check"></i>';
+    setTimeout(() => {
+      btn.innerHTML = originalHTML;
+    }, 1500);
+  }
+
+  // Test connection
+  function testConnection(integrationId) {
+    const resultDiv = document.getElementById('testResult' + integrationId);
+    const statusDiv = document.getElementById('testStatus' + integrationId);
+    const btn = event.target;
+    
+    // Show loading
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Testing...';
+    resultDiv.style.display = 'none';
+    
+    // Simulate test (trong thực tế gọi API)
+    fetch('{% url "integration:test" 0 %}'.replace('0', integrationId), {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      resultDiv.style.display = 'block';
+      if (data.success) {
+        statusDiv.innerHTML = `
+          <div class="alert alert-success">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Kết nối thành công!</strong><br>
+            Response: ${data.response_code || 'OK'}
+          </div>
+        `;
+      } else {
+        statusDiv.innerHTML = `
+          <div class="alert alert-danger">
+            <i class="bi bi-exclamation-circle me-2"></i>
+            <strong>Lỗi kết nối!</strong><br>
+            ${data.error || 'Không thể kết nối đến API'}
+          </div>
+        `;
+      }
+    })
+    .catch(error => {
+      resultDiv.style.display = 'block';
+      statusDiv.innerHTML = `
+        <div class="alert alert-danger">
+          <i class="bi bi-exclamation-circle me-2"></i>
+          <strong>Lỗi!</strong><br>
+          ${error.message}
+        </div>
+      `;
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-play-circle me-1"></i>Test';
+    });
+  }
+</script>
+
+<style>
+  .fw-500 {
+    font-weight: 500;
+  }
+  .text-sm {
+    font-size: 0.875rem;
+  }
+  .status-indicator {
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+</style>
 {% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h4 class="fw-bold mb-1">{{ page_title }}</h4>
+    <p class="text-muted mb-0">Thong tin lich hen, ket qua ky thuat va thanh toan.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'vehicle_inspection:inspection_list' %}" class="btn btn-outline-secondary btn-sm">Quay lai</a>
+    {% if inspection.status == "passed" %}
+      <a href="{% url 'vehicle_inspection:certificate_pdf' inspection.pk %}" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>In chung nhan
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+          <div>
+            <p class="small text-muted mb-1">Bien so</p>
+            <h5 class="fw-bold mb-0">{{ inspection.vehicle.license_plate }}</h5>
+          </div>
+          <span class="badge {{ inspection.status_badge_class }}">{{ inspection.status_label }}</span>
+        </div>
+        <div class="row g-2 small">
+          <div class="col-12 col-md-6"><strong>Loai xe:</strong> {{ inspection.vehicle.get_vehicle_type_display }}</div>
+          <div class="col-12 col-md-6"><strong>Chu xe:</strong> {{ inspection.vehicle.owner.get_full_name|default:inspection.vehicle.owner.username }}</div>
+          <div class="col-12 col-md-6"><strong>Hang/Model:</strong> {{ inspection.vehicle.brand|default:"" }} {{ inspection.vehicle.model|default:"" }}</div>
+          <div class="col-12 col-md-6"><strong>Mau/Nam:</strong> {{ inspection.vehicle.color|default:"Chua cap nhat" }} {% if inspection.vehicle.year %}({{ inspection.vehicle.year }}){% endif %}</div>
+          <div class="col-12 col-md-6"><strong>Ngay hen:</strong> {{ inspection.scheduled_date|date:"d/m/Y H:i" }}</div>
+          <div class="col-12 col-md-6"><strong>Trung tam:</strong> {{ inspection.center.name|default:"Chua chon" }}</div>
+          <div class="col-12 col-md-6"><strong>Can bo:</strong> {{ inspection.inspector.get_full_name|default:"Chua phan cong" }}</div>
+          <div class="col-12 col-md-6"><strong>Hieu luc den:</strong> {{ inspection.valid_until|date:"d/m/Y"|default:"Chua co" }}</div>
+          <div class="col-12 col-md-6"><strong>So chung nhan:</strong> {{ inspection.certificate_number|default:"Chua cap" }}</div>
+          <div class="col-12 col-md-6"><strong>Phi:</strong> {{ inspection.fee|floatformat:0|default:"0" }} VND {% if inspection.is_fee_paid %}<span class="badge text-bg-success ms-1">Da thanh toan</span>{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">Thao tac</h6>
+        <div class="d-grid gap-2">
+          {% if can_update %}
+            <a href="{% url 'vehicle_inspection:update' inspection.pk %}" class="btn btn-outline-primary">Cap nhat ket qua</a>
+          {% endif %}
+          {% if can_pay %}
+            <a href="{% url 'vehicle_inspection:pay' inspection.pk %}" class="btn btn-outline-success">Thanh toan phi</a>
+          {% endif %}
+          {% if can_cancel %}
+            <a href="{% url 'vehicle_inspection:cancel' inspection.pk %}" class="btn btn-outline-danger">Huy lich hen</a>
+          {% endif %}
+          {% if not can_update and not can_pay and not can_cancel %}
+            <div class="text-muted small">Khong co thao tac can xu ly.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-3">
+  <div class="card-body">
+    <h6 class="fw-bold mb-3">Ket qua ky thuat</h6>
+    <div class="row g-3 small">
+      <div class="col-12 col-lg-6">
+        <div class="text-muted mb-1">Ghi chu</div>
+        <div style="white-space:pre-line">{{ inspection.technical_notes|default:"Chua co ghi chu." }}</div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="text-muted mb-1">Loi phat hien</div>
+        <div style="white-space:pre-line">{{ inspection.defects|default:"Khong ghi nhan loi." }}</div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="text-muted mb-1">Yeu cau sua chua</div>
+        <div style="white-space:pre-line">{{ inspection.repair_required|default:"Khong co." }}</div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="text-muted mb-1">Ket qua sua chua</div>
+        <div style="white-space:pre-line">{{ inspection.repair_result|default:"Chua cap nhat." }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,31 +1,378 @@
 {% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+.kpi-card { transition: transform .15s, box-shadow .15s; }
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1) !important; }
+.kpi-value { font-size: 2.2rem; font-weight: 700; line-height: 1.1; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Stats" }}</h4>
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">
+      <i class="bi bi-bar-chart-fill text-primary me-2"></i>{{ page_title }}
+    </h4>
+    <small class="text-muted">Tổng quan tình hình xử lý phản ánh và bảo trì</small>
+  </div>
+  <a href="{% url 'maintenance:request_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-list-check me-1"></i>Danh sách phản ánh
+  </a>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Stats</div></div>
-{% endif %}
+
+{# ── KPI Cards — tính trực tiếp từ stats.by_status ── #}
+<div class="row g-3 mb-4">
+
+  {# Tổng phản ánh #}
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm kpi-card h-100">
+      <div class="card-body text-center py-4">
+        {% with total=0 %}
+        <div class="kpi-value text-primary mb-1">
+          {% for item in stats.by_status %}{% endfor %}
+          {% with stats.by_status as s %}
+            {% for item in s %}
+              {# Django không có reduce, đếm tổng qua template tag add #}
+            {% endfor %}
+          {% endwith %}
+          {{ stats.by_status|length }}
+          {# Ghi chú: total thực sẽ từ JSON bên dưới, value này dùng làm placeholder #}
+        </div>
+        {% endwith %}
+        <div class="small text-muted fw-semibold">Nhóm trạng thái</div>
+        <div class="mt-2 small text-primary">Đang theo dõi</div>
+      </div>
+    </div>
+  </div>
+
+  {# Hoàn thành #}
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm kpi-card h-100">
+      <div class="card-body text-center py-4">
+        <div class="kpi-value text-success mb-1" id="kpi-completed">—</div>
+        <div class="small text-muted fw-semibold">Đã hoàn thành</div>
+        <div class="mt-2">
+          <span class="badge bg-success bg-opacity-10 text-success" id="kpi-rate">—%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Đánh giá trung bình #}
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm kpi-card h-100">
+      <div class="card-body text-center py-4">
+        <div class="kpi-value text-warning mb-1">
+          {% if stats.avg_rating %}{{ stats.avg_rating|floatformat:1 }}{% else %}—{% endif %}
+        </div>
+        <div class="small text-muted fw-semibold">Đánh giá TB</div>
+        <div class="mt-2 text-warning" style="font-size:.85rem;">★★★★★</div>
+      </div>
+    </div>
+  </div>
+
+  {# Loại sự cố #}
+  <div class="col-6 col-lg-3">
+    <div class="card border-0 shadow-sm kpi-card h-100">
+      <div class="card-body text-center py-4">
+        <div class="kpi-value text-info mb-1">{{ stats.by_type|length }}</div>
+        <div class="small text-muted fw-semibold">Loại sự cố</div>
+        <div class="mt-2 small text-info">Phân loại đang theo dõi</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Charts ── #}
+<div class="row g-3 mb-4">
+
+  {# Trạng thái — Doughnut #}
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-pie-chart me-2 text-primary"></i>Phân bố theo trạng thái
+      </div>
+      <div class="card-body d-flex flex-column align-items-center justify-content-center">
+        <div style="max-width:240px; width:100%;">
+          <canvas id="statusChart"></canvas>
+        </div>
+        <div id="status-legend" class="mt-3 w-100" style="font-size:.82rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  {# Loại sự cố — Horizontal Bar #}
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-bar-chart-horizontal me-2 text-info"></i>Số lượng theo loại sự cố
+      </div>
+      <div class="card-body">
+        <canvas id="typeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Bảng chi tiết ── #}
+<div class="row g-3">
+
+  {# Ưu tiên #}
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-flag me-2 text-warning"></i>Theo mức độ ưu tiên
+      </div>
+      <div class="card-body p-0">
+        {% for item in stats.by_priority %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <span class="badge text-nowrap
+            {% if item.priority == 'urgent' %}bg-danger
+            {% elif item.priority == 'high' %}bg-warning text-dark
+            {% elif item.priority == 'medium' %}bg-info text-dark
+            {% else %}bg-secondary{% endif %}"
+            style="min-width:80px; text-align:center;">
+            {% if item.priority == 'urgent' %}Khẩn cấp
+            {% elif item.priority == 'high' %}Cao
+            {% elif item.priority == 'medium' %}Trung bình
+            {% else %}Thấp{% endif %}
+          </span>
+          <div class="progress flex-grow-1" style="height:7px;">
+            <div class="progress-bar
+              {% if item.priority == 'urgent' %}bg-danger
+              {% elif item.priority == 'high' %}bg-warning
+              {% elif item.priority == 'medium' %}bg-info
+              {% else %}bg-secondary{% endif %}"
+              style="width: {{ item.count }}0%; max-width:100%;"></div>
+          </div>
+          <span class="fw-bold text-end" style="min-width:28px;">{{ item.count }}</span>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-4 small">Chưa có dữ liệu</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# Trạng thái — bảng #}
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent fw-bold py-3">
+        <i class="bi bi-table me-2 text-success"></i>Chi tiết theo trạng thái
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="font-size:.85rem;">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Trạng thái</th>
+                <th class="text-center">Số lượng</th>
+                <th class="pe-3">Tỷ lệ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in stats.by_status %}
+              <tr>
+                <td class="ps-3">
+                  <span class="badge
+                    {% if item.status == 'completed' %}bg-success
+                    {% elif item.status == 'in_progress' %}bg-info text-dark
+                    {% elif item.status == 'pending' %}bg-warning text-dark
+                    {% elif item.status == 'assigned' %}bg-primary
+                    {% elif item.status == 'received' %}bg-info text-dark
+                    {% elif item.status == 'rejected' %}bg-danger
+                    {% elif item.status == 'cancelled' %}bg-secondary
+                    {% else %}bg-secondary{% endif %}">
+                    {% if item.status == 'pending' %}Chờ tiếp nhận
+                    {% elif item.status == 'received' %}Đã tiếp nhận
+                    {% elif item.status == 'assigned' %}Đã phân công
+                    {% elif item.status == 'in_progress' %}Đang xử lý
+                    {% elif item.status == 'completed' %}Hoàn thành
+                    {% elif item.status == 'rejected' %}Từ chối
+                    {% elif item.status == 'cancelled' %}Đã hủy
+                    {% else %}{{ item.status }}{% endif %}
+                  </span>
+                </td>
+                <td class="text-center fw-bold">{{ item.count }}</td>
+                <td class="pe-3" style="min-width:140px;">
+                  <div class="progress" style="height:7px;">
+                    <div class="progress-bar
+                      {% if item.status == 'completed' %}bg-success
+                      {% elif item.status == 'in_progress' %}bg-info
+                      {% elif item.status == 'pending' %}bg-warning
+                      {% elif item.status == 'assigned' %}bg-primary
+                      {% else %}bg-secondary{% endif %}"
+                      style="width: {% widthratio item.count 10 100 %}%; max-width:100%;">
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted py-4">Chưa có dữ liệu</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script id="chart-data" type="application/json">
+{
+  "byStatus": [
+    {% for item in stats.by_status %}
+    {
+      "key": "{{ item.status }}",
+      "count": {{ item.count }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "byType": [
+    {% for item in stats.by_type %}
+    {
+      "key": "{{ item.incident_type }}",
+      "count": {{ item.count }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* Đọc dữ liệu từ thẻ JSON — không chứa Django tags nên VS Code không báo lỗi */
+var chartData = JSON.parse(document.getElementById('chart-data').textContent);
+
+/* Map nhãn hiển thị */
+var STATUS_LABEL = {
+  pending:     'Chờ tiếp nhận',
+  received:    'Đã tiếp nhận',
+  assigned:    'Đã phân công',
+  in_progress: 'Đang xử lý',
+  completed:   'Hoàn thành',
+  rejected:    'Từ chối',
+  cancelled:   'Đã hủy'
+};
+var STATUS_COLOR = {
+  pending:     '#ffc107',
+  received:    '#0dcaf0',
+  assigned:    '#0d6efd',
+  in_progress: '#6f42c1',
+  completed:   '#198754',
+  rejected:    '#dc3545',
+  cancelled:   '#6c757d'
+};
+var TYPE_LABEL = {
+  road_damage:   'Hư hỏng đường',
+  pothole:       'Ổ gà',
+  traffic_light: 'Đèn giao thông',
+  drainage:      'Thoát nước',
+  bridge:        'Cầu cống',
+  sign:          'Biển báo',
+  lighting:      'Chiếu sáng',
+  other:         'Khác'
+};
+var PALETTE = ['#0d6efd','#198754','#ffc107','#dc3545','#0dcaf0','#6f42c1','#fd7e14','#20c997'];
+
+/* ── 1. KPI: hoàn thành + tỷ lệ ── */
+var totalAll = 0;
+var totalDone = 0;
+chartData.byStatus.forEach(function(d) {
+  totalAll += d.count;
+  if (d.key === 'completed') totalDone = d.count;
+});
+var kpiCompleted = document.getElementById('kpi-completed');
+var kpiRate = document.getElementById('kpi-rate');
+if (kpiCompleted) kpiCompleted.textContent = totalDone;
+if (kpiRate) kpiRate.textContent = totalAll > 0 ? Math.round(totalDone / totalAll * 100) + '%' : '0%';
+
+/* ── 2. Status Doughnut ── */
+var statusLabels = chartData.byStatus.map(function(d) { return STATUS_LABEL[d.key] || d.key; });
+var statusCounts = chartData.byStatus.map(function(d) { return d.count; });
+var statusColors = chartData.byStatus.map(function(d) { return STATUS_COLOR[d.key] || '#6c757d'; });
+
+var statusCtx = document.getElementById('statusChart');
+if (statusCtx && statusLabels.length) {
+  new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+      labels: statusLabels,
+      datasets: [{
+        data: statusCounts,
+        backgroundColor: statusColors,
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ' ' + ctx.label + ': ' + ctx.parsed; }
+          }
+        }
+      }
+    }
+  });
+
+  /* Custom legend */
+  var legendEl = document.getElementById('status-legend');
+  if (legendEl) {
+    chartData.byStatus.forEach(function(d, i) {
+      var color = STATUS_COLOR[d.key] || PALETTE[i % PALETTE.length];
+      var label = STATUS_LABEL[d.key] || d.key;
+      var row = document.createElement('div');
+      row.className = 'd-flex align-items-center gap-2 mb-1';
+      row.innerHTML =
+        '<span style="width:10px;height:10px;border-radius:2px;background:' + color + ';flex-shrink:0;"></span>' +
+        '<span class="flex-grow-1">' + label + '</span>' +
+        '<span class="fw-bold">' + d.count + '</span>';
+      legendEl.appendChild(row);
+    });
+  }
+}
+
+/* ── 3. Type Horizontal Bar ── */
+var typeLabels = chartData.byType.map(function(d) { return TYPE_LABEL[d.key] || d.key; });
+var typeCounts = chartData.byType.map(function(d) { return d.count; });
+var typeColors = PALETTE.slice(0, typeLabels.length);
+
+var typeCtx = document.getElementById('typeChart');
+if (typeCtx && typeLabels.length) {
+  new Chart(typeCtx, {
+    type: 'bar',
+    data: {
+      labels: typeLabels,
+      datasets: [{
+        label: 'Số sự cố',
+        data: typeCounts,
+        backgroundColor: typeColors,
+        borderRadius: 5
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: '#f0f0f0' },
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
+        },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+}
+</script>
 {% endblock %}

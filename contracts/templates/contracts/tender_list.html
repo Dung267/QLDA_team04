@@ -1,31 +1,208 @@
 {% extends "base.html" %}
 {% block content %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Tender List" }}</h4>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-hammer text-primary me-2"></i>Quản lý đấu thầu
+  </h4>
+  {% if user.is_staff_member %}
+  <a href="{% url 'contracts:tender_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Tạo gói thầu
+  </a>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Tender List</div></div>
+
+{# ── Thống kê nhanh ── #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-primary">{{ stats.total|default:0 }}</div>
+      <div class="small text-muted">Tổng gói thầu</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-warning">{{ stats.open|default:0 }}</div>
+      <div class="small text-muted">Đang mở thầu</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-success">{{ stats.awarded|default:0 }}</div>
+      <div class="small text-muted">Đã trao thầu</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fw-bold fs-5 text-danger">{{ stats.cancelled|default:0 }}</div>
+      <div class="small text-muted">Đã hủy</div>
+    </div>
+  </div>
+</div>
+
+{# ── Filter ── #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold text-muted mb-1">Tìm kiếm</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control"
+                 placeholder="Tiêu đề gói thầu..."
+                 value="{{ request.GET.q|default:'' }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Trạng thái</label>
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          <option value="open"      {% if request.GET.status == 'open' %}selected{% endif %}>Đang mở</option>
+          <option value="closed"    {% if request.GET.status == 'closed' %}selected{% endif %}>Đã đóng</option>
+          <option value="awarded"   {% if request.GET.status == 'awarded' %}selected{% endif %}>Đã trao thầu</option>
+          <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Đã hủy</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary btn-sm me-1">
+          <i class="bi bi-funnel me-1"></i>Lọc
+        </button>
+        <a href="{% url 'contracts:tender_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-circle me-1"></i>Xóa lọc
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Danh sách gói thầu dạng card ── #}
+<div class="row g-3">
+  {% for tender in page_obj %}
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-start justify-content-between mb-2">
+          <div class="flex-grow-1 me-2">
+            <h6 class="fw-bold mb-1">{{ tender.title }}</h6>
+            <div class="text-muted" style="font-size:.8rem">
+              Tạo: {{ tender.created_at|date:"d/m/Y" }}
+              {% if tender.created_by %}· bởi {{ tender.created_by.get_full_name|default:tender.created_by.username }}{% endif %}
+            </div>
+          </div>
+          {# status badge – dựa theo STATUS_CHOICES của model #}
+          {% if tender.status == 'open' %}
+            <span class="badge bg-warning text-dark flex-shrink-0">Đang mở</span>
+          {% elif tender.status == 'awarded' %}
+            <span class="badge bg-success flex-shrink-0">Đã trao thầu</span>
+          {% elif tender.status == 'closed' %}
+            <span class="badge bg-info text-dark flex-shrink-0">Đã đóng</span>
+          {% elif tender.status == 'cancelled' %}
+            <span class="badge bg-danger flex-shrink-0">Đã hủy</span>
+          {% else %}
+            <span class="badge bg-secondary flex-shrink-0">{{ tender.status }}</span>
+          {% endif %}
+        </div>
+
+        {# description – DB text #}
+        <p class="text-muted small mb-3" style="line-height:1.5">
+          {{ tender.description|truncatechars:120|default:"—" }}
+        </p>
+
+        <div class="row g-2 mb-3" style="font-size:.82rem">
+          {# budget – DB decimal(18,0) #}
+          <div class="col-6">
+            <div class="text-muted">Ngân sách</div>
+            <div class="fw-semibold text-primary">{{ tender.budget|floatformat:0 }} ₫</div>
+          </div>
+          {# deadline – DB datetime #}
+          <div class="col-6">
+            <div class="text-muted">Hạn nộp hồ sơ</div>
+            <div class="fw-semibold">
+              {{ tender.deadline|date:"d/m/Y H:i"|default:"—" }}
+            </div>
+          </div>
+        </div>
+
+        {# awarded_to – FK Contractor (nullable) #}
+        {% if tender.awarded_to %}
+        <div class="alert alert-success d-flex align-items-center gap-2 py-2 mb-3" style="font-size:.84rem">
+          <i class="bi bi-trophy-fill text-warning"></i>
+          <span>Trúng thầu: <strong>{{ tender.awarded_to.name }}</strong></span>
+        </div>
+        {% endif %}
+
+        {# result_contract – OneToOne FK Contract (nullable) #}
+        {% if tender.result_contract %}
+        <div class="d-flex align-items-center gap-2 small text-muted mb-2">
+          <i class="bi bi-file-earmark-text text-primary"></i>
+          <span>HĐ liên kết:
+            <a href="{% url 'contracts:contract_detail' tender.result_contract.pk %}"
+               class="text-decoration-none fw-semibold">
+              {{ tender.result_contract.contract_number }}
+            </a>
+          </span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card-footer bg-transparent border-top py-2 d-flex justify-content-end">
+        {# Chỉ có tender_list và tender_create trong urls.py, không có tender_detail/tender_edit #}
+        <span class="text-muted small me-auto align-self-center">
+          Ngân sách: {{ tender.budget|floatformat:0 }} ₫
+        </span>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-hammer display-6 d-block mb-2 opacity-50"></i>
+        Không có gói thầu nào
+        {% if user.is_staff_member %}
+        <div class="mt-3">
+          <a href="{% url 'contracts:tender_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>Tạo gói thầu đầu tiên
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── Phân trang ── #}
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+      </li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
 {% endif %}
+
 {% endblock %}

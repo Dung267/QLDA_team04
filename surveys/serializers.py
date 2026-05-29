@@ -1,17 +1,8 @@
 from rest_framework import serializers
-from .models import Survey, SurveyQuestion, SurveyResponse
-
-
-class SurveyQuestionSerializer(serializers.ModelSerializer):
-    type_display = serializers.CharField(source='get_question_type_display', read_only=True)
-
-    class Meta:
-        model = SurveyQuestion
-        fields = '__all__'
+from .models import Survey, SurveyResponse
 
 
 class SurveySerializer(serializers.ModelSerializer):
-    questions = SurveyQuestionSerializer(many=True, read_only=True)
     response_count = serializers.SerializerMethodField()
 
     class Meta:

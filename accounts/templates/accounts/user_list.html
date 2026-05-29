@@ -1,31 +1,176 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"User List" }}</h4>
+<div class="container-fluid px-0">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h4 class="fw-bold mb-0">{{ page_title|default:"Quản lý người dùng" }}</h4>
+      <div class="text-muted" style="font-size:.9rem">Danh sách tài khoản theo vai trò và quận tại Đà Nẵng</div>
+    </div>
+    <a class="btn btn-primary" href="{% url 'accounts:create_staff' %}">
+      <i class="bi bi-person-plus-fill me-1"></i>
+      Thêm mới nhân viên
+    </a>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-center">
+        <div class="col-12 col-md-5">
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input
+              type="text"
+              class="form-control"
+              name="search"
+              value="{{ request.GET.search }}"
+              placeholder="Tìm theo username, email, số điện thoại..."
+              aria-label="Tìm kiếm"
+            >
+          </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <select name="role" class="form-select">
+            <option value="">Tất cả vai trò</option>
+            {% for role_code, role_name in role_filters %}
+              <option value="{{ role_code }}" {% if request.GET.role == role_code %}selected{% endif %}>{{ role_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <select name="district" class="form-select">
+            <option value="">Tất cả quận</option>
+            {% for d in districts %}
+              <option value="{{ d }}" {% if request.GET.district == d %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-md-1 d-grid">
+          <button type="submit" class="btn btn-outline-primary">
+            Lọc
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">Username</th>
+              <th>Email</th>
+              <th>Số điện thoại</th>
+              <th>Role</th>
+              <th>Quận</th>
+              <th>Trạng thái</th>
+              <th class="text-end pe-3">Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if page_obj %}
+              {% for u in page_obj %}
+                <tr>
+                  <td class="ps-3 fw-semibold">{{ u.username }}</td>
+                  <td>{{ u.email|default:"-" }}</td>
+                  <td>{{ u.phone|default:"-" }}</td>
+                  <td>
+                    {% if u.role == 'admin' or u.is_superuser %}
+                      <span class="badge bg-danger">Admin</span>
+                    {% elif u.role == 'staff' or u.role == 'manager' or u.role == 'inspector' %}
+                      <span class="badge bg-primary">Cán bộ</span>
+                    {% elif u.role == 'citizen' %}
+                      <span class="badge bg-success">Người dân</span>
+                    {% else %}
+                      <span class="badge bg-secondary">{{ u.get_role_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ u.district|default:"-" }}</td>
+                  <td>
+                    {% if u.is_locked %}
+                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Đang khóa</span>
+                    {% else %}
+                      <span class="badge bg-success-subtle text-success border border-success-subtle">Đang hoạt động</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end pe-3">
+                    <form method="post" action="{% url 'accounts:toggle_lock_user' u.pk %}" class="d-inline">
+                      {% csrf_token %}
+                      {% if u.is_locked %}
+                        <button
+                          type="submit"
+                          class="btn btn-sm btn-outline-success"
+                          data-bs-toggle="tooltip"
+                          data-bs-title="Mở khóa tài khoản"
+                        >
+                          <i class="bi bi-unlock-fill"></i>
+                        </button>
+                      {% else %}
+                        <button
+                          type="submit"
+                          class="btn btn-sm btn-outline-danger"
+                          data-bs-toggle="tooltip"
+                          data-bs-title="Khóa tài khoản"
+                        >
+                          <i class="bi bi-lock-fill"></i>
+                        </button>
+                      {% endif %}
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">Chưa có dữ liệu người dùng</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="7" class="text-center py-4 text-muted">Không thể tải dữ liệu. Vui lòng thử lại.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if page_obj and page_obj.has_other_pages %}
+    <nav class="mt-3" aria-label="Phân trang">
+      <ul class="pagination justify-content-center">
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+          <a class="page-link" href="?page=1&{{ request.GET.urlencode|cut:'page='|cut:page_obj.number }}">«</a>
+        </li>
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode|cut:'page='|cut:page_obj.number }}">‹</a>
+        </li>
+        <li class="page-item disabled">
+          <span class="page-link">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+        </li>
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode|cut:'page='|cut:page_obj.number }}">›</a>
+        </li>
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+          <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&{{ request.GET.urlencode|cut:'page='|cut:page_obj.number }}">»</a>
+        </li>
+      </ul>
+    </nav>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang User List</div></div>
-{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  })();
+</script>
 {% endblock %}

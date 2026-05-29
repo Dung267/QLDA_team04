@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'hr:training_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-mortarboard-fill text-primary me-2"></i>
+    {{ training.title }}
+  </h4>
+  {% if user.is_staff %}
+  <a href="{% url 'hr:training_edit' training.pk %}" class="btn btn-outline-secondary btn-sm ms-auto">
+    <i class="bi bi-pencil me-1"></i>Chỉnh sửa
+  </a>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  {# Left: thông tin khóa #}
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          {# Status badge tính từ ngày thực tế #}
+          {% if training.end_date < today %}
+            <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Đã hoàn thành</span>
+          {% elif training.start_date <= today %}
+            <span class="badge bg-info text-dark fs-6"><i class="bi bi-play-circle me-1"></i>Đang diễn ra</span>
+          {% else %}
+            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-clock me-1"></i>Sắp diễn ra</span>
+          {% endif %}
+          {% if training.certificate_required %}
+            <span class="badge bg-primary"><i class="bi bi-award me-1"></i>Cấp chứng chỉ</span>
+          {% endif %}
+        </div>
+
+        {# description #}
+        {% if training.description %}
+        <p class="text-muted mb-4">{{ training.description }}</p>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="p-3 rounded bg-light">
+              <div class="text-muted small mb-1">Giảng viên</div>
+              <div class="fw-semibold">
+                <i class="bi bi-person-video2 text-primary me-2"></i>
+                {{ training.trainer|default:"Chưa xác định" }}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded bg-light">
+              <div class="text-muted small mb-1">Ngày bắt đầu</div>
+              <div class="fw-semibold">
+                <i class="bi bi-calendar-event text-success me-1"></i>
+                {{ training.start_date|date:"d/m/Y" }}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 rounded bg-light">
+              <div class="text-muted small mb-1">Ngày kết thúc</div>
+              <div class="fw-semibold">
+                <i class="bi bi-calendar-check text-danger me-1"></i>
+                {{ training.end_date|date:"d/m/Y" }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# Progress bar nếu đang diễn ra #}
+        {% if training.start_date <= today and training.end_date >= today %}
+        <div class="mt-4">
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>Tiến độ khóa học</span>
+            <span>{{ progress_pct }}%</span>
+          </div>
+          <div class="progress" style="height:8px">
+            <div class="progress-bar bg-info" style="width:{{ progress_pct }}%"></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Danh sách học viên — participants ManyToManyField(Employee) #}
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-people text-primary me-2"></i>
+          Học viên tham gia ({{ training.participants.count }})
+        </h6>
+        {% if user.is_staff %}
+        <a href="{% url 'hr:training_edit' training.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-person-plus me-1"></i>Quản lý học viên
+        </a>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if participants %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="font-size:.85rem">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">#</th>
+                <th>Họ tên</th>
+                <th>Mã NV</th>
+                <th>Phòng ban</th>
+                <th>Chức vụ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for emp in participants %}
+              <tr>
+                <td class="ps-3 text-muted">{{ forloop.counter }}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold
+                                d-flex align-items-center justify-content-center"
+                         style="width:30px;height:30px;font-size:.75rem;flex-shrink:0">
+                      {{ emp.user.get_full_name|first|upper }}
+                    </div>
+                    <a href="{% url 'hr:employee_detail' emp.pk %}"
+                       class="text-decoration-none text-dark fw-semibold">
+                      {{ emp.user.get_full_name }}
+                    </a>
+                  </div>
+                </td>
+                <td class="text-muted">{{ emp.employee_id }}</td>
+                <td class="text-muted">{{ emp.department.name|default:"—" }}</td>
+                <td class="text-muted">{{ emp.position|default:"—" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+          <i class="bi bi-people display-6 d-block mb-2 opacity-50"></i>
+          Chưa có học viên nào được đăng ký
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Right: sidebar #}
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Thông tin tổng quan</h6>
+        <ul class="list-unstyled small mb-0">
+          <li class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted">Số học viên</span>
+            <strong>{{ training.participants.count }}</strong>
+          </li>
+          <li class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted">Thời lượng</span>
+            <strong>{{ duration_days }} ngày</strong>
+          </li>
+          <li class="d-flex justify-content-between py-2 border-bottom">
+            <span class="text-muted">Cấp chứng chỉ</span>
+            <strong>{% if training.certificate_required %}Có{% else %}Không{% endif %}</strong>
+          </li>
+          <li class="d-flex justify-content-between py-2">
+            <span class="text-muted">Ngày tạo</span>
+            <strong>{{ training.created_at|date:"d/m/Y" }}</strong>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    {% if user.is_staff %}
+    <div class="card border-0 shadow-sm border-danger">
+      <div class="card-body">
+        <h6 class="fw-bold text-danger mb-3"><i class="bi bi-trash me-2"></i>Vùng nguy hiểm</h6>
+        <form method="post" action="{% url 'hr:training_delete' training.pk %}"
+              onsubmit="return confirm('Xóa khóa đào tạo này? Hành động không thể hoàn tác.')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+            <i class="bi bi-trash me-1"></i>Xóa khóa đào tạo
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

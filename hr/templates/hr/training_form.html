@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'hr:training_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-mortarboard-fill text-primary me-2"></i>
+    {% if object %}Chỉnh sửa khóa đào tạo{% else %}Tạo khóa đào tạo mới{% endif %}
+  </h4>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {# title – DB CharField(200) #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Tên khóa đào tạo <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="title"
+                   class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                   value="{{ form.title.value|default:'' }}"
+                   placeholder="VD: An toàn lao động 2025"
+                   maxlength="200" required>
+            {% if form.title.errors %}<div class="invalid-feedback">{{ form.title.errors.0 }}</div>{% endif %}
+          </div>
+
+          {# description – DB TextField #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Mô tả</label>
+            <textarea name="description" rows="3"
+                      class="form-control"
+                      placeholder="Nội dung, mục tiêu khóa đào tạo...">{{ form.description.value|default:'' }}</textarea>
+          </div>
+
+          {# trainer – DB CharField(100) #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Giảng viên</label>
+            <input type="text" name="trainer"
+                   class="form-control {% if form.trainer.errors %}is-invalid{% endif %}"
+                   value="{{ form.trainer.value|default:'' }}"
+                   placeholder="Tên giảng viên hoặc đơn vị đào tạo"
+                   maxlength="100">
+            {% if form.trainer.errors %}<div class="invalid-feedback">{{ form.trainer.errors.0 }}</div>{% endif %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            {# start_date – DB DateField #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                Ngày bắt đầu <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="start_date" id="start-date"
+                     class="form-control {% if form.start_date.errors %}is-invalid{% endif %}"
+                     value="{{ form.start_date.value|default:'' }}"
+                     required onchange="calcDuration()">
+              {% if form.start_date.errors %}<div class="invalid-feedback">{{ form.start_date.errors.0 }}</div>{% endif %}
+            </div>
+
+            {# end_date – DB DateField #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">
+                Ngày kết thúc <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="end_date" id="end-date"
+                     class="form-control {% if form.end_date.errors %}is-invalid{% endif %}"
+                     value="{{ form.end_date.value|default:'' }}"
+                     required onchange="calcDuration()">
+              {% if form.end_date.errors %}<div class="invalid-feedback">{{ form.end_date.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          {# Duration summary #}
+          <div id="duration-summary" class="alert alert-info d-flex align-items-center gap-2 py-2 mb-3"
+               style="font-size:.9rem;display:none!important">
+            <i class="bi bi-calendar-range"></i>
+            <span>Thời gian: <strong id="num-days">—</strong></span>
+          </div>
+
+          {# participants – DB ManyToManyField #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Học viên tham gia</label>
+            <select name="participants" class="form-select" multiple size="6">
+              {% for emp in form.participants.field.queryset %}
+              <option value="{{ emp.pk }}"
+                {% if emp in form.participants.value %}selected{% endif %}>
+                {{ emp.user.get_full_name }} – {{ emp.department.name|default:"?" }} ({{ emp.employee_id }})
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text text-muted">Giữ Ctrl/Cmd để chọn nhiều người</div>
+          </div>
+
+          {# certificate_required – DB BooleanField #}
+          <div class="form-check mb-4">
+            <input class="form-check-input" type="checkbox" name="certificate_required"
+                   id="chk-cert"
+                   {% if form.certificate_required.value %}checked{% endif %}>
+            <label class="form-check-label" for="chk-cert">
+              <i class="bi bi-award text-warning me-1"></i>
+              Cấp chứng chỉ sau khóa đào tạo
+            </label>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{% url 'hr:training_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x me-1"></i>Hủy
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-circle me-1"></i>
+              {% if object %}Cập nhật{% else %}Tạo khóa đào tạo{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Hướng dẫn</h6>
+        <ul class="list-unstyled small text-muted mb-0">
+          <li class="mb-2"><i class="bi bi-1-circle text-primary me-2"></i>Đặt tên khóa học rõ ràng, dễ nhận biết</li>
+          <li class="mb-2"><i class="bi bi-2-circle text-primary me-2"></i>Chọn đúng ngày bắt đầu và kết thúc để hệ thống tự tính trạng thái</li>
+          <li class="mb-2"><i class="bi bi-3-circle text-primary me-2"></i>Chọn học viên từ danh sách nhân viên hiện có</li>
+          <li><i class="bi bi-4-circle text-primary me-2"></i>Tích "Cấp chứng chỉ" nếu khóa học có chứng nhận hoàn thành</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function calcDuration() {
+  const s = document.getElementById('start-date').value;
+  const e = document.getElementById('end-date').value;
+  const div = document.getElementById('duration-summary');
+  const span = document.getElementById('num-days');
+  if (!s || !e) { div.style.display = 'none'; return; }
+  const start = new Date(s), end = new Date(e);
+  if (end < start) {
+    span.textContent = '⚠️ Ngày kết thúc phải sau ngày bắt đầu';
+    div.style.display = 'flex';
+    return;
+  }
+  const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  span.textContent = `${diff} ngày (${start.toLocaleDateString('vi-VN')} → ${end.toLocaleDateString('vi-VN')})`;
+  div.style.display = 'flex';
+}
+calcDuration();
+</script>
+{% endblock %}

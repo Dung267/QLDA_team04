@@ -1,31 +1,192 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Employee List" }}</h4>
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-people-fill text-primary me-2"></i>Quản lý nhân sự
+  </h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'hr:assignment_create' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-briefcase me-1"></i>Giao việc
+    </a>
+    <a href="{% url 'admin:hr_employee_add' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-circle me-1"></i>Thêm nhân viên
+    </a>
+  </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Employee List</div></div>
-{% endif %}
+
+{# Stats #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-primary bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-4 text-primary">{{ total_count }}</div>
+      <div class="small text-muted">Tổng nhân viên</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-success bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-4 text-success">{{ departments|length }}</div>
+      <div class="small text-muted">Phòng ban</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-warning bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-4 text-warning">{{ page_obj.paginator.count }}</div>
+      <div class="small text-muted">Kết quả tìm kiếm</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 bg-info bg-opacity-10 text-center py-3">
+      <div class="fw-bold fs-4 text-info">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</div>
+      <div class="small text-muted">Trang</div>
+    </div>
+  </div>
+</div>
+
+{# Filter #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold text-muted mb-1">Tìm kiếm</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" name="q" class="form-control"
+                 placeholder="Tên, mã NV, chức vụ..." value="{{ request.GET.q }}">
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold text-muted mb-1">Phòng ban</label>
+        <select name="department" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả phòng ban</option>
+          {% for dept in departments %}
+          <option value="{{ dept.pk }}" {% if request.GET.department == dept.pk|stringformat:'s' %}selected{% endif %}>
+            {{ dept.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary btn-sm me-2">
+          <i class="bi bi-funnel me-1"></i>Lọc
+        </button>
+        <a href="{% url 'hr:employee_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-circle me-1"></i>Xóa lọc
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Table #}
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.875rem">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Nhân viên</th>
+            <th>Mã NV</th>
+            <th>Phòng ban</th>
+            <th>Chức vụ</th>
+            <th>Loại HĐ</th>
+            <th>Ngày vào</th>
+            <th class="text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in page_obj %}
+          <tr>
+            <td class="ps-3">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary fw-bold
+                            d-flex align-items-center justify-content-center flex-shrink-0"
+                     style="width:36px;height:36px;font-size:.85rem">
+                  {{ emp.user.get_full_name|first|upper }}
+                </div>
+                <div>
+                  <div class="fw-semibold">{{ emp.user.get_full_name }}</div>
+                  <div class="text-muted small">{{ emp.user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge bg-secondary bg-opacity-25 text-dark">{{ emp.employee_id }}</span></td>
+            <td>
+              {% if emp.department %}
+                <span class="badge bg-primary bg-opacity-10 text-primary">{{ emp.department.name }}</span>
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ emp.position|default:"—" }}</td>
+            <td>
+              {% if emp.contract_type %}
+                <span class="badge bg-info bg-opacity-15 text-info">{{ emp.contract_type }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ emp.hire_date|date:"d/m/Y"|default:"—" }}</td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'hr:employee_detail' emp.pk %}"
+                   class="btn btn-outline-primary btn-sm" title="Xem chi tiết">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{% url 'hr:assignment_create' %}?employee={{ emp.pk }}"
+                   class="btn btn-outline-success btn-sm" title="Giao việc">
+                  <i class="bi bi-briefcase-fill"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-5">
+              <i class="bi bi-people display-5 d-block mb-2 opacity-50"></i>
+              Không tìm thấy nhân viên nào
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+      <small class="text-muted">
+        {{ page_obj.start_index }}–{{ page_obj.end_index }} / {{ page_obj.paginator.count }} nhân viên
+      </small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.department %}&department={{ request.GET.department }}{% endif %}">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+          </li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

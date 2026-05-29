@@ -1,31 +1,385 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Yearly" }}</h4>
+{# ── Header ── #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="d-flex align-items-center">
+    <a href="{% url 'reports:summary' %}" class="btn btn-sm btn-outline-secondary me-3">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="fw-bold mb-0">
+      <i class="bi bi-bar-chart-fill text-primary me-2"></i>{{ page_title }}
+    </h4>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    {# Chọn năm #}
+    <form method="get" class="d-flex align-items-center gap-2">
+      <select name="year" class="form-select form-select-sm" style="width:110px" onchange="this.form.submit()">
+        {% for y in year_list %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <a href="{% url 'reports:export_excel' %}?year={{ year }}"
+       class="btn btn-sm btn-outline-success">
+      <i class="bi bi-file-earmark-excel me-1"></i>Excel
+    </a>
+    <a href="{% url 'reports:export_pdf' %}?year={{ year }}"
+       class="btn btn-sm btn-outline-danger">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+    </a>
+    <a href="{% url 'reports:export_word' %}?year={{ year }}"
+       class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-file-earmark-word me-1"></i>Word
+    </a>
+  </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Yearly</div></div>
-{% endif %}
+
+{# ── KPI tổng năm ── #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fs-2 fw-bold text-primary">{{ yearly_stats.total }}</div>
+      <div class="small text-muted fw-semibold">Tổng sự cố</div>
+      <div class="small mt-1 {% if yearly_stats.vs_prev >= 0 %}text-danger{% else %}text-success{% endif %}">
+        <i class="bi bi-arrow-{% if yearly_stats.vs_prev >= 0 %}up{% else %}down{% endif %}-short"></i>
+        {{ yearly_stats.vs_prev|default:0 }}% so với {{ year|add:"-1" }}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fs-2 fw-bold text-success">{{ yearly_stats.completed }}</div>
+      <div class="small text-muted fw-semibold">Đã hoàn thành</div>
+      <div class="small text-success mt-1">{{ yearly_stats.resolve_rate }}% tỷ lệ xử lý</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fs-2 fw-bold text-warning">{{ yearly_stats.pending }}</div>
+      <div class="small text-muted fw-semibold">Chờ xử lý</div>
+      <div class="small text-muted mt-1">{{ yearly_stats.in_progress }} đang xử lý</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3">
+      <div class="fs-2 fw-bold text-danger">{{ yearly_stats.total_cost }}M</div>
+      <div class="small text-muted fw-semibold">Tổng chi phí (M₫)</div>
+    </div>
+  </div>
+</div>
+
+{# ── Charts Row 1 ── #}
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-bar-chart text-primary me-2"></i>Sự cố theo tháng — {{ year }}
+        </h6>
+        <div style="position:relative;height:260px">
+          <canvas id="barChart"
+                  role="img"
+                  aria-label="Biểu đồ số lượng sự cố theo từng tháng trong năm {{ year }}">
+          </canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-pie-chart text-primary me-2"></i>Phân loại sự cố
+        </h6>
+        <div style="position:relative;height:180px">
+          <canvas id="pieChart"
+                  role="img"
+                  aria-label="Biểu đồ tròn phân loại sự cố trong năm {{ year }}">
+          </canvas>
+        </div>
+        <div id="pie-legend" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Charts Row 2 ── #}
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-graph-up text-success me-2"></i>Chi phí bảo trì theo tháng (M₫)
+        </h6>
+        <div style="position:relative;height:220px">
+          <canvas id="costChart"
+                  role="img"
+                  aria-label="Biểu đồ chi phí bảo trì theo tháng">
+          </canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-check2-circle text-info me-2"></i>Tỷ lệ hoàn thành theo tháng (%)
+        </h6>
+        <div style="position:relative;height:220px">
+          <canvas id="rateChart"
+                  role="img"
+                  aria-label="Biểu đồ tỷ lệ hoàn thành sự cố theo tháng">
+          </canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Bảng chi tiết 12 tháng ── #}
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent py-3 fw-bold">
+        <i class="bi bi-table text-primary me-2"></i>Chi tiết theo tháng — {{ year }}
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="font-size:.875rem">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Tháng</th>
+                <th class="text-center">Tổng</th>
+                <th class="text-center">Hoàn thành</th>
+                <th class="text-center">Chi phí (M₫)</th>
+                <th>Tỷ lệ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in monthly_data %}
+              <tr>
+                <td class="ps-3 fw-semibold">Tháng {{ row.month }}</td>
+                <td class="text-center">
+                  {% if row.count > 0 %}
+                    <span class="fw-bold text-primary">{{ row.count }}</span>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="text-center text-success fw-semibold">{{ row.completed }}</td>
+                <td class="text-center text-muted small">{{ row.cost }}</td>
+                <td style="min-width:120px">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="progress flex-grow-1" style="height:5px">
+                      <div class="progress-bar
+                        {% if row.rate >= 80 %}bg-success
+                        {% elif row.rate >= 50 %}bg-warning
+                        {% else %}bg-danger{% endif %}"
+                        style="width:{{ row.rate }}%">
+                      </div>
+                    </div>
+                    <small class="text-muted" style="min-width:32px">{{ row.rate }}%</small>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+              <tr>
+                <td class="ps-3 fw-bold">Tổng cộng</td>
+                <td class="text-center fw-bold text-primary">{{ yearly_stats.total }}</td>
+                <td class="text-center fw-bold text-success">{{ yearly_stats.completed }}</td>
+                <td class="text-center fw-bold text-muted">{{ yearly_stats.total_cost }}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="progress flex-grow-1" style="height:5px">
+                      <div class="progress-bar bg-primary" style="width:{{ yearly_stats.resolve_rate }}%"></div>
+                    </div>
+                    <small class="fw-bold text-primary" style="min-width:32px">{{ yearly_stats.resolve_rate }}%</small>
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Top khu vực #}
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-transparent py-3 fw-bold">
+        <i class="bi bi-geo-alt-fill text-danger me-2"></i>Top khu vực — {{ year }}
+      </div>
+      <div class="card-body">
+        {% for d in top_districts %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle bg-danger bg-opacity-10 text-danger fw-bold
+                        d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width:28px;height:28px;font-size:.75rem">
+              {{ forloop.counter }}
+            </div>
+            <span class="small fw-semibold">{{ d.name }}</span>
+          </div>
+          <span class="badge bg-danger bg-opacity-15 text-danger fw-semibold">{{ d.count }}</span>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-3 small">Chưa có dữ liệu</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Chart.js ── #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const PALETTE = ['#0d6efd','#198754','#ffc107','#dc3545','#0dcaf0','#6f42c1','#fd7e14'];
+const monthLabels = JSON.parse('{{ months|default:"[]"|escapejs }}');
+const dataMonths  = JSON.parse('{{ data_months|default:"[]"|escapejs }}');
+const dataComp    = JSON.parse('{{ data_completed|default:"[]"|escapejs }}');
+const dataCosts   = JSON.parse('{{ data_costs|default:"[]"|escapejs }}');
+const typeLabels  = JSON.parse('{{ type_labels|default:"[]"|escapejs }}');
+const typeCounts  = JSON.parse('{{ type_counts|default:"[]"|escapejs }}');
+
+const rateData = dataMonths.map((v, i) =>
+  v > 0 ? Math.round(dataComp[i] / v * 100) : 0
+);
+
+// 1. Bar — sự cố theo tháng
+new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: {
+    labels: monthLabels,
+    datasets: [
+      {
+        label: 'Tổng sự cố',
+        data: dataMonths,
+        backgroundColor: 'rgba(13,110,253,.75)',
+        borderRadius: 4,
+        borderSkipped: false,
+      },
+      {
+        label: 'Hoàn thành',
+        data: dataComp,
+        backgroundColor: 'rgba(25,135,84,.75)',
+        borderRadius: 4,
+        borderSkipped: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(0,0,0,.06)' }, beginAtZero: true, ticks: { stepSize: 1 } }
+    }
+  }
+});
+
+// Legend thủ công
+document.getElementById('barChart').closest('.card-body').insertAdjacentHTML('beforeend',
+  `<div class="d-flex gap-3 mt-2" style="font-size:12px">
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(13,110,253,.75)"></span>Tổng sự cố</span>
+    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(25,135,84,.75)"></span>Hoàn thành</span>
+  </div>`
+);
+
+// 2. Doughnut — phân loại
+new Chart(document.getElementById('pieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: typeLabels,
+    datasets: [{
+      data: typeCounts,
+      backgroundColor: PALETTE,
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  },
+  options: {
+    cutout: '62%',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } }
+  }
+});
+
+const legendEl = document.getElementById('pie-legend');
+typeLabels.forEach((l, i) => {
+  legendEl.innerHTML += `<div class="d-flex align-items-center gap-2 mb-1" style="font-size:12px">
+    <span style="width:10px;height:10px;border-radius:2px;background:${PALETTE[i]};flex-shrink:0"></span>
+    <span class="text-truncate flex-grow-1" style="color:var(--bs-body-color)">${l}</span>
+    <span class="fw-semibold">${typeCounts[i]||0}</span>
+  </div>`;
+});
+
+// 3. Line — chi phí
+new Chart(document.getElementById('costChart'), {
+  type: 'line',
+  data: {
+    labels: monthLabels,
+    datasets: [{
+      label: 'Chi phí (M₫)',
+      data: dataCosts,
+      borderColor: '#fd7e14',
+      backgroundColor: 'rgba(253,126,20,.1)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 4,
+      pointBackgroundColor: '#fd7e14',
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(0,0,0,.06)' }, beginAtZero: true }
+    }
+  }
+});
+
+// 4. Line — tỷ lệ hoàn thành
+new Chart(document.getElementById('rateChart'), {
+  type: 'line',
+  data: {
+    labels: monthLabels,
+    datasets: [{
+      label: 'Tỷ lệ hoàn thành (%)',
+      data: rateData,
+      borderColor: '#0dcaf0',
+      backgroundColor: 'rgba(13,202,240,.1)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 4,
+      pointBackgroundColor: '#0dcaf0',
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        grid: { color: 'rgba(0,0,0,.06)' },
+        beginAtZero: true,
+        max: 100,
+        ticks: { callback: v => v + '%' }
+      }
+    }
+  }
+});
+</script>
 {% endblock %}

@@ -1,31 +1,294 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Alert List" }}</h4>
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-droplet-fill text-danger me-2"></i>Cảnh báo ngập lụt
+  </h4>
+  {% if user.is_staff_member %}
+  <a href="{% url 'flood:alert_create' %}" class="btn btn-danger">
+    <i class="bi bi-exclamation-triangle-fill me-1"></i>Phát lệnh cảnh báo
+  </a>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Alert List</div></div>
+
+{# ── Banner khẩn cấp cấp 3-4 ── #}
+{% if critical_alert %}
+<div class="alert alert-danger d-flex align-items-center gap-3 mb-4 border-0 shadow"
+     style="border-left:5px solid #dc3545!important">
+  <div class="fs-2">
+    <i class="bi bi-exclamation-octagon-fill"></i>
+  </div>
+  <div class="flex-grow-1">
+    <div class="fw-bold fs-6">🚨 CẢNH BÁO KHẨN CẤP – {{ critical_alert.get_level_display }}</div>
+    <div class="small">
+      {{ critical_alert.title }} – {{ critical_alert.area_name }} |
+      Mực nước: <strong>{{ critical_alert.water_level_cm }} cm</strong>
+    </div>
+  </div>
+  <a href="{% url 'flood:alert_detail' critical_alert.pk %}" class="btn btn-light btn-sm flex-shrink-0">
+    Xem ngay <i class="bi bi-arrow-right ms-1"></i>
+  </a>
+</div>
 {% endif %}
+
+{# ── Thống kê nhanh ── #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 border-top border-3 border-danger">
+      <div class="fw-bold fs-4 text-danger">{{ stats.active|default:0 }}</div>
+      <div class="small text-muted">Đang hoạt động</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 border-top border-3 border-warning">
+      <div class="fw-bold fs-4 text-warning">{{ stats.level3_4|default:0 }}</div>
+      <div class="small text-muted">Cấp độ 3–4</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 border-top border-3 border-success">
+      <div class="fw-bold fs-4 text-success">{{ stats.resolved|default:0 }}</div>
+      <div class="small text-muted">Đã giải quyết</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3 border-top border-3 border-info">
+      <div class="fw-bold fs-4 text-info">{{ stats.sms_sent|default:0 }}</div>
+      <div class="small text-muted">Đã gửi SMS</div>
+    </div>
+  </div>
+</div>
+
+{# ── Bộ lọc ── #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-end">
+      {# level – DB varchar(2): 1/2/3/4 #}
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Cấp độ</label>
+        <select name="level" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          {% for val, lbl in level_choices %}
+          <option value="{{ val }}" {% if request.GET.level == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {# area_type – DB varchar(10) #}
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Loại khu vực</label>
+        <select name="area_type" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          <option value="district" {% if request.GET.area_type == 'district' %}selected{% endif %}>Quận/Huyện</option>
+          <option value="ward"     {% if request.GET.area_type == 'ward' %}selected{% endif %}>Phường/Xã</option>
+          <option value="road"     {% if request.GET.area_type == 'road' %}selected{% endif %}>Tuyến đường</option>
+          <option value="infra"    {% if request.GET.area_type == 'infra' %}selected{% endif %}>Hạ tầng</option>
+        </select>
+      </div>
+      {# is_active – DB bit #}
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Trạng thái</label>
+        <select name="active" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          <option value="1" {% if request.GET.active == '1' %}selected{% endif %}>Đang hoạt động</option>
+          <option value="0" {% if request.GET.active == '0' %}selected{% endif %}>Đã giải quyết</option>
+        </select>
+      </div>
+      {# created_at__date >= date_from #}
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold text-muted mb-1">Từ ngày</label>
+        <input type="date" name="date_from" class="form-control form-control-sm"
+               value="{{ request.GET.date_from }}">
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary btn-sm me-2">
+          <i class="bi bi-funnel me-1"></i>Lọc
+        </button>
+        <a href="{% url 'flood:alert_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x-circle me-1"></i>Xóa lọc
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Bảng dữ liệu ── #}
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.85rem">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width:100px">Cấp độ</th>
+            <th>Tiêu đề &amp; Khu vực</th>
+            <th>Loại KV</th>
+            <th>Mực nước</th>
+            <th>Thông báo</th>
+            <th>Người tạo</th>
+            <th>Thời gian</th>
+            <th>Trạng thái</th>
+            {% if user.is_staff_member %}<th class="text-center">Thao tác</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for alert in page_obj %}
+          <tr class="{% if alert.is_active and alert.level == '4' %}table-danger
+                     {% elif alert.is_active and alert.level == '3' %}table-warning{% endif %}">
+
+            {# level – DB varchar(2) #}
+            <td class="ps-3">
+              {% if alert.level == '4' %}
+                <span class="badge bg-danger">🚨 Cấp 4</span>
+              {% elif alert.level == '3' %}
+                <span class="badge bg-warning text-dark">⚠️ Cấp 3</span>
+              {% elif alert.level == '2' %}
+                <span class="badge bg-info text-dark">🔷 Cấp 2</span>
+              {% else %}
+                <span class="badge bg-secondary">🔹 Cấp 1</span>
+              {% endif %}
+            </td>
+
+            {# title, area_name – DB #}
+            <td>
+              <a href="{% url 'flood:alert_detail' alert.pk %}" class="fw-semibold text-decoration-none text-dark">
+                {{ alert.title }}
+              </a>
+              <div class="text-muted small">
+                <i class="bi bi-geo-alt me-1"></i>{{ alert.area_name }}
+              </div>
+            </td>
+
+            {# area_type – DB varchar(10) #}
+            <td class="text-muted small">{{ alert.get_area_type_display }}</td>
+
+            {# water_level_cm – DB int #}
+            <td>
+              <span class="fw-semibold
+                {% if alert.water_level_cm >= 80 %}text-danger
+                {% elif alert.water_level_cm >= 40 %}text-warning
+                {% else %}text-muted{% endif %}">
+                {{ alert.water_level_cm }} cm
+              </span>
+            </td>
+
+            {# is_sent_sms, rescue_teams_notified – DB bit #}
+            <td>
+              <div class="d-flex gap-1 flex-wrap">
+                {% if alert.is_sent_sms %}
+                  <span class="badge bg-success"><i class="bi bi-phone-fill me-1"></i>SMS</span>
+                {% else %}
+                  <span class="badge bg-light text-muted border"><i class="bi bi-phone me-1"></i>SMS</span>
+                {% endif %}
+                {% if alert.rescue_teams_notified %}
+                  <span class="badge bg-primary"><i class="bi bi-people-fill me-1"></i>Cứu hộ</span>
+                {% else %}
+                  <span class="badge bg-light text-muted border"><i class="bi bi-people me-1"></i>Cứu hộ</span>
+                {% endif %}
+              </div>
+            </td>
+
+            {# created_by – FK #}
+            <td class="text-muted small">
+              {{ alert.created_by.get_full_name|default:alert.created_by.username|default:"—" }}
+            </td>
+
+            {# created_at – DB datetime #}
+            <td class="text-muted small">
+              <div>{{ alert.created_at|date:"d/m/Y" }}</div>
+              <div>{{ alert.created_at|time:"H:i" }}</div>
+            </td>
+
+            {# is_active – DB bit #}
+            <td>
+              {% if alert.is_active %}
+                <span class="badge bg-danger">🔴 Hoạt động</span>
+              {% else %}
+                <span class="badge bg-success">✅ Giải quyết</span>
+                {% if alert.resolved_at %}
+                <div class="text-muted" style="font-size:.7rem">
+                  {{ alert.resolved_at|date:"d/m/Y H:i" }}
+                </div>
+                {% endif %}
+              {% endif %}
+            </td>
+
+            {% if user.is_staff_member %}
+            <td class="text-center">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'flood:alert_detail' alert.pk %}"
+                   class="btn btn-outline-primary" title="Chi tiết">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{% url 'flood:alert_edit' alert.pk %}"
+                   class="btn btn-outline-secondary" title="Sửa">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% if alert.is_active %}
+                <form method="post" action="{% url 'flood:alert_resolve' alert.pk %}"
+                      class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline-success"
+                          title="Đánh dấu giải quyết"
+                          onclick="return confirm('Xác nhận đã giải quyết cảnh báo ngập này?')">
+                    <i class="bi bi-check-circle"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+            {% endif %}
+
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center text-muted py-5">
+              <i class="bi bi-droplet display-6 d-block mb-2 opacity-50"></i>
+              Không có cảnh báo ngập nào
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Phân trang #}
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top">
+      <small class="text-muted">
+        {{ page_obj.start_index }}–{{ page_obj.end_index }}
+        / {{ page_obj.paginator.count }} cảnh báo
+      </small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&level={{ request.GET.level }}&area_type={{ request.GET.area_type }}&active={{ request.GET.active }}&date_from={{ request.GET.date_from }}">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+          </li>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ num }}&level={{ request.GET.level }}&area_type={{ request.GET.area_type }}&active={{ request.GET.active }}&date_from={{ request.GET.date_from }}">{{ num }}</a>
+            </li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&level={{ request.GET.level }}&area_type={{ request.GET.area_type }}&active={{ request.GET.active }}&date_from={{ request.GET.date_from }}">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
 {% endblock %}

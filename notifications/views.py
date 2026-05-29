@@ -52,3 +52,9 @@ def delete_notification(request, pk):
 def unread_count(request):
     count = Notification.objects.filter(recipient=request.user, is_read=False).count()
     return JsonResponse({'count': count})
+
+
+def clear_all(request):
+    if request.method == "POST":
+        Notification.objects.filter(user=request.user).delete()
+    return redirect("notifications:list")

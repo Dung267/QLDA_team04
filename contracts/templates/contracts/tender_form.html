@@ -1,31 +1,219 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Tender Form" }}</h4>
+
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'contracts:tender_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-hammer text-primary me-2"></i>{{ page_title }}
+  </h4>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Tender Form</div></div>
-{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {# ── 1. Thông tin gói thầu ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-primary rounded-pill me-2">1</span>Thông tin gói thầu
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                Tên gói thầu <span class="text-danger">*</span>
+              </label>
+              {{ form.title }}
+              {% if form.title.errors %}
+                <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-5">
+              <label class="form-label fw-semibold small">Trạng thái</label>
+              {{ form.status }}
+              {% if form.status.errors %}
+                <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                Mô tả yêu cầu <span class="text-danger">*</span>
+              </label>
+              {{ form.description }}
+              {% if form.description.errors %}
+                <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {# ── 2. Ngân sách & Thời gian ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-primary rounded-pill me-2">2</span>Ngân sách & Thời gian
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Ngân sách (₫) <span class="text-danger">*</span>
+              </label>
+              <div class="input-group input-group-sm">
+                {{ form.budget }}
+                <span class="input-group-text">₫</span>
+              </div>
+              {% if form.budget.errors %}
+                <div class="text-danger small mt-1">{{ form.budget.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Hạn nộp hồ sơ <span class="text-danger">*</span>
+              </label>
+              {{ form.deadline }}
+              {% if form.deadline.errors %}
+                <div class="text-danger small mt-1">{{ form.deadline.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {# ── 3. Kết quả trao thầu — chỉ hiện khi status = 'awarded' ── #}
+      <div class="card border-0 shadow-sm mb-4" id="winner-section">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-success rounded-pill me-2">3</span>Kết quả trao thầu
+          <span class="text-muted fw-normal small ms-2">(chỉ điền khi đã trao thầu)</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Nhà thầu trúng thầu</label>
+              {{ form.awarded_to }}
+              {% if form.awarded_to.errors %}
+                <div class="text-danger small mt-1">{{ form.awarded_to.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Hợp đồng kết quả</label>
+              {{ form.result_contract }}
+              <div class="form-text text-muted">Liên kết với hợp đồng được ký sau khi trao thầu</div>
+              {% if form.result_contract.errors %}
+                <div class="text-danger small mt-1">{{ form.result_contract.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2">
+        {% for err in form.non_field_errors %}
+          <div>{{ err }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'contracts:tender_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x me-1"></i>Hủy
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-floppy me-1"></i>Tạo gói thầu
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {# Sidebar quy trình #}
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-diagram-3 text-primary me-2"></i>Quy trình đấu thầu
+        </h6>
+        <div class="d-flex flex-column gap-2" style="font-size:.83rem">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-warning text-dark flex-shrink-0" style="min-width:90px">Đang mở</span>
+            <span class="text-muted">Phát hành & nhận hồ sơ dự thầu</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-info text-dark flex-shrink-0" style="min-width:90px">Đã đóng</span>
+            <span class="text-muted">Hết hạn nộp, đang chấm điểm</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success flex-shrink-0" style="min-width:90px">Đã trao thầu</span>
+            <span class="text-muted">Đã chọn nhà thầu & ký HĐ</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-danger flex-shrink-0" style="min-width:90px">Hủy</span>
+            <span class="text-muted">Gói thầu bị hủy bỏ</span>
+          </div>
+        </div>
+
+        <hr class="my-3">
+        <div class="small text-muted">
+          <i class="bi bi-info-circle me-1"></i>
+          Sau khi trao thầu, hãy tạo hợp đồng tương ứng và liên kết lại với gói thầu này.
+        </div>
+
+        {% if contractor_list %}
+        <hr class="my-3">
+        <h6 class="fw-bold mb-2 small">Nhà thầu đang hoạt động ({{ contractor_list|length }})</h6>
+        <ul class="list-unstyled mb-0" style="font-size:.8rem">
+          {% for c in contractor_list|slice:":5" %}
+          <li class="text-muted py-1 border-bottom">
+            <i class="bi bi-building me-1"></i>{{ c.name }}
+          </li>
+          {% endfor %}
+          {% if contractor_list|length > 5 %}
+          <li class="text-muted pt-1" style="font-size:.75rem">... và {{ contractor_list|length|add:"-5" }} nhà thầu khác</li>
+          {% endif %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const statusSel      = document.querySelector('[name="status"]');
+  const winnerSection  = document.getElementById('winner-section');
+
+  function toggleWinner() {
+    if (statusSel && winnerSection) {
+      // Luôn hiện section nhưng đổi tiêu đề để rõ ràng hơn
+      // Nếu không phải 'awarded' thì không bắt buộc điền
+      const isAwarded = statusSel.value === 'awarded';
+      winnerSection.style.borderColor = isAwarded ? 'var(--bs-success)' : '';
+      const header = winnerSection.querySelector('.card-header');
+      if (header) {
+        const badge = header.querySelector('.badge');
+        if (badge) {
+          badge.className = isAwarded ? 'badge bg-success rounded-pill me-2' : 'badge bg-secondary rounded-pill me-2';
+        }
+      }
+    }
+  }
+
+  if (statusSel) {
+    statusSel.addEventListener('change', toggleWinner);
+    toggleWinner();
+  }
+});
+</script>
+
 {% endblock %}

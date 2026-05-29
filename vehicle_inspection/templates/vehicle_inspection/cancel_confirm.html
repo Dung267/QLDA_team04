@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="fw-bold mb-1">{{ page_title }}</h4>
+    <p class="text-muted mb-0">Xac nhan huy lich dang kiem cho {{ inspection.vehicle.license_plate }}.</p>
+  </div>
+  <a href="{% url 'vehicle_inspection:inspection_detail' inspection.pk %}" class="btn btn-outline-secondary btn-sm">Quay lai</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <p class="mb-3">Lich hen ngay <strong>{{ inspection.scheduled_date|date:"d/m/Y H:i" }}</strong> se duoc chuyen sang trang thai da huy.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Xac nhan huy lich</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

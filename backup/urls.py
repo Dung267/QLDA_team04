@@ -1,10 +1,27 @@
 from django.urls import path
 from . import views
+
 app_name = 'backup'
+
 urlpatterns = [
-    path('', views.backup_list, name='list'),
+    # Danh sách backup
+    path('', views.list_backups, name='list'),
+    
+    # Tạo backup
     path('create/', views.create_backup, name='create'),
-    path('<int:pk>/restore/', views.restore_backup, name='restore'),
+    
+    # Xóa backup
     path('<int:pk>/delete/', views.delete_backup, name='delete'),
-    path('config/', views.save_config, name='config'),
+    
+    # Khôi phục backup
+    path('<int:pk>/restore/', views.restore_backup, name='restore'),
+    
+    # Download backup
+    path('<int:pk>/download/', views.download_backup, name='download'),
+    
+    # Cấu hình backup
+    path('config/', views.configure_backup, name='config'),
+    
+    # Thống kê
+    path('stats/', views.backup_stats, name='stats'),
 ]

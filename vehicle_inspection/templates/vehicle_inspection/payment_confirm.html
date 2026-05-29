@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="fw-bold mb-1">{{ page_title }}</h4>
+    <p class="text-muted mb-0">Xac nhan thanh toan phi dang kiem cho {{ inspection.vehicle.license_plate }}.</p>
+  </div>
+  <a href="{% url 'vehicle_inspection:inspection_detail' inspection.pk %}" class="btn btn-outline-secondary btn-sm">Quay lai</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <div class="mb-3">
+      <div class="text-muted small">So tien can thanh toan</div>
+      <div class="fs-4 fw-bold">{{ inspection.fee|floatformat:0 }} VND</div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-check mb-3">
+        {{ form.confirm }}
+        <label class="form-check-label" for="{{ form.confirm.id_for_label }}">{{ form.confirm.label }}</label>
+        {% for error in form.confirm.errors %}
+          <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-success">Xac nhan thanh toan</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

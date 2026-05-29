@@ -1,31 +1,224 @@
 {% extends "base.html" %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Schedule List" }}</h4>
+  <div>
+    <h4 class="fw-bold mb-0">
+      <i class="bi bi-calendar3 text-primary me-2"></i>{{ page_title }}
+    </h4>
+    <small class="text-muted">Quản lý kế hoạch và tiến độ bảo trì hạ tầng</small>
+  </div>
+  {% if user.is_staff_member or user.is_admin %}
+  <a href="{% url 'maintenance:schedule_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Thêm lịch mới
+  </a>
+  {% endif %}
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Schedule List</div></div>
+
+{# ── Bộ lọc ── #}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2 px-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-12 col-md-7">
+        <label class="form-label small text-muted mb-1">Tìm kiếm</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-transparent"><i class="bi bi-search text-muted"></i></span>
+          <input type="text" name="q" value="{{ q|default:'' }}" class="form-control"
+                 placeholder="Tên lịch, tuyến đường, hạ tầng...">
+          {% if q %}
+          <a href="{% url 'maintenance:schedule_list' %}" class="btn btn-outline-secondary btn-sm" title="Xóa bộ lọc">
+            <i class="bi bi-x"></i>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-6 col-md-3">
+        <label class="form-label small text-muted mb-1">Trạng thái</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tất cả</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-2">
+        <button type="submit" class="btn btn-secondary btn-sm w-100">
+          <i class="bi bi-funnel me-1"></i>Lọc
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Bảng danh sách ── #}
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.85rem;">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3" style="width:50px;">#</th>
+            <th>Hạng mục</th>
+            <th>Hạ tầng / Tuyến đường</th>
+            <th>Người phụ trách</th>
+            <th>Ngày bắt đầu</th>
+            <th>Chi phí DK</th>
+            <th>Trạng thái</th>
+            <th class="text-end pe-3" style="width:110px;">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in page_obj %}
+          <tr>
+            <td class="ps-3 text-muted fw-semibold">#{{ item.pk }}</td>
+
+            <td>
+              <div class="fw-medium">{{ item.title|truncatechars:45 }}</div>
+              {% if item.is_periodic %}
+              <span class="badge bg-info text-dark" style="font-size:.65rem;">
+                <i class="bi bi-arrow-repeat me-1"></i>Định kỳ {{ item.period_days }}N
+              </span>
+              {% endif %}
+            </td>
+
+            <td class="text-muted">
+              {% if item.road %}
+                <i class="bi bi-signpost-2 me-1 text-primary"></i>{{ item.road.name|truncatechars:30 }}
+              {% elif item.infrastructure %}
+                <i class="bi bi-buildings me-1 text-info"></i>{{ item.infrastructure.name|truncatechars:30 }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% for u in item.assigned_to.all %}
+                <span class="badge bg-light text-dark border me-1">
+                  {{ u.get_full_name|default:u.username|truncatechars:15 }}
+                </span>
+              {% empty %}
+                <span class="text-muted small">Chưa phân công</span>
+              {% endfor %}
+            </td>
+
+            <td class="text-nowrap text-muted">
+              <i class="bi bi-calendar-event me-1"></i>
+              {{ item.scheduled_date|date:"d/m/Y" }}
+            </td>
+
+            <td class="text-nowrap">
+              {% if item.estimated_cost %}
+                {{ item.estimated_cost|floatformat:0 }} ₫
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if item.status == 'completed' %}
+                <span class="badge bg-success">Hoàn thành</span>
+              {% elif item.status == 'in_progress' %}
+                <span class="badge bg-info text-dark">Đang thực hiện</span>
+              {% elif item.status == 'confirmed' %}
+                <span class="badge bg-primary">Đã xác nhận</span>
+              {% elif item.status == 'postponed' %}
+                <span class="badge bg-danger">Hoãn</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Kế hoạch</span>
+              {% endif %}
+            </td>
+
+            <td class="text-end pe-3">
+              <div class="d-flex gap-1 justify-content-end">
+                {% if user.is_staff_member or user.is_admin %}
+                <a href="{% url 'maintenance:schedule_update' item.pk %}"
+                   class="btn btn-sm btn-outline-warning" title="Chỉnh sửa">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <i class="bi bi-calendar-x display-6 d-block mb-2 opacity-40"></i>
+              {% if q or selected_status %}
+                Không tìm thấy lịch bảo trì phù hợp.
+                <a href="{% url 'maintenance:schedule_list' %}" class="d-block mt-1 small">Xóa bộ lọc</a>
+              {% else %}
+                Chưa có lịch bảo trì nào.
+                {% if user.is_staff_member or user.is_admin %}
+                <a href="{% url 'maintenance:schedule_create' %}" class="d-block mt-1 small">
+                  <i class="bi bi-plus-circle me-1"></i>Tạo lịch đầu tiên
+                </a>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Thống kê nhanh #}
+    {% if page_obj.paginator.count %}
+    <div class="px-3 py-2 border-top bg-light bg-opacity-50 d-flex justify-content-between align-items-center"
+         style="font-size:.8rem;">
+      <span class="text-muted">
+        Tổng: <strong>{{ page_obj.paginator.count }}</strong> lịch bảo trì
+        {% if q or selected_status %}(đã lọc){% endif %}
+      </span>
+      <span class="text-muted">
+        Trang {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}
+      </span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Phân trang ── #}
+{% if page_obj.has_other_pages %}
+<nav class="mt-3">
+  <ul class="pagination pagination-sm justify-content-center mb-0">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled">
+      <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+    </li>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if num == page_obj.number %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+      {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}{% if querystring %}&{{ querystring }}{% endif %}">{{ num }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+    </li>
+    {% else %}
+    <li class="page-item disabled">
+      <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
 {% endif %}
 {% endblock %}

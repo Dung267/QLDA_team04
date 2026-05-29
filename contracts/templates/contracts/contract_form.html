@@ -1,31 +1,251 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Contract Form" }}</h4>
+
+<div class="d-flex align-items-center mb-4">
+  {% if is_edit %}
+  <a href="{% url 'contracts:contract_detail' contract.pk %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  {% else %}
+  <a href="{% url 'contracts:contract_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  {% endif %}
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-file-earmark-{% if is_edit %}check{% else %}plus{% endif %} text-primary me-2"></i>
+    {{ page_title }}
+  </h4>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Contract Form</div></div>
-{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      {# ── 1. Thông tin cơ bản ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-primary rounded-pill me-2">1</span>Thông tin hợp đồng
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-md-5">
+              <label class="form-label fw-semibold small">
+                Số hợp đồng <span class="text-danger">*</span>
+              </label>
+              {{ form.contract_number }}
+              {% if form.contract_number.errors %}
+                <div class="text-danger small mt-1">{{ form.contract_number.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">Trạng thái</label>
+              {{ form.status }}
+              {% if form.status.errors %}
+                <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small">Tiến độ (%)</label>
+              {{ form.progress_percent }}
+              <div class="progress mt-1" style="height:4px">
+                <div id="prog-bar" class="progress-bar bg-primary"
+                     style="width:{{ form.progress_percent.value|default:0 }}%"></div>
+              </div>
+              {% if form.progress_percent.errors %}
+                <div class="text-danger small mt-1">{{ form.progress_percent.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                Tiêu đề hợp đồng <span class="text-danger">*</span>
+              </label>
+              {{ form.title }}
+              {% if form.title.errors %}
+                <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Mô tả</label>
+              {{ form.description }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ── 2. Nhà thầu ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-primary rounded-pill me-2">2</span>Nhà thầu
+        </div>
+        <div class="card-body">
+          <label class="form-label fw-semibold small">
+            Nhà thầu <span class="text-danger">*</span>
+          </label>
+          {{ form.contractor }}
+          {% if form.contractor.errors %}
+            <div class="text-danger small mt-1">{{ form.contractor.errors.0 }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# ── 3. Tài chính & Thời gian ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-primary rounded-pill me-2">3</span>Tài chính & Thời gian
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Giá trị hợp đồng (₫) <span class="text-danger">*</span>
+              </label>
+              <div class="input-group input-group-sm">
+                {{ form.value }}
+                <span class="input-group-text">₫</span>
+              </div>
+              {% if form.value.errors %}
+                <div class="text-danger small mt-1">{{ form.value.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Tiền bảo lãnh (₫)</label>
+              <div class="input-group input-group-sm">
+                {{ form.guaranty }}
+                <span class="input-group-text">₫</span>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Ngày bắt đầu <span class="text-danger">*</span>
+              </label>
+              {{ form.start_date }}
+              {% if form.start_date.errors %}
+                <div class="text-danger small mt-1">{{ form.start_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Ngày kết thúc <span class="text-danger">*</span>
+              </label>
+              {{ form.end_date }}
+              {% if form.end_date.errors %}
+                <div class="text-danger small mt-1">{{ form.end_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ── 4. Điều khoản & Tài liệu ── #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent fw-bold py-3">
+          <span class="badge bg-primary rounded-pill me-2">4</span>Điều khoản & Tài liệu
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Điều khoản hợp đồng</label>
+              {{ form.terms }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold small">
+                <i class="bi bi-paperclip me-1 text-warning"></i>Tài liệu hợp đồng (PDF/DOC...)
+              </label>
+              {% if is_edit and contract.document %}
+              <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light rounded small">
+                <i class="bi bi-file-earmark-pdf text-danger"></i>
+                <span class="text-truncate">{{ contract.document.name|cut:"contracts/" }}</span>
+                <a href="{{ contract.document.url }}" download class="btn btn-link btn-sm p-0 ms-auto">
+                  <i class="bi bi-download"></i>
+                </a>
+              </div>
+              <div class="form-text text-muted mb-1">Tải file mới để thay thế file hiện tại</div>
+              {% endif %}
+              {{ form.document }}
+              {% if not is_edit %}
+              <div class="form-text text-muted">Tải lên bản scan hoặc file hợp đồng chính thức</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Form-level errors (vd: lỗi validate ngày) #}
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2">
+        {% for err in form.non_field_errors %}
+          <div>{{ err }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-end gap-2">
+        {% if is_edit %}
+        <a href="{% url 'contracts:contract_detail' contract.pk %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x me-1"></i>Hủy
+        </a>
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-floppy me-1"></i>Lưu thay đổi
+        </button>
+        {% else %}
+        <a href="{% url 'contracts:contract_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x me-1"></i>Hủy
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-floppy me-1"></i>Tạo hợp đồng
+        </button>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  {# Sidebar hướng dẫn #}
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-lightbulb text-warning me-2"></i>Hướng dẫn
+        </h6>
+        <ul class="list-unstyled small text-muted mb-0">
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Số hợp đồng phải là duy nhất trong hệ thống</li>
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Ngày bắt đầu phải trước ngày kết thúc</li>
+          <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Chọn nhà thầu từ danh mục có sẵn</li>
+          <li><i class="bi bi-check-circle text-success me-2"></i>Đính kèm file hợp đồng (PDF, Word) nếu có</li>
+        </ul>
+        <hr class="my-3">
+        <h6 class="fw-bold mb-2 small">Trạng thái hợp đồng</h6>
+        <div class="d-flex flex-column gap-1" style="font-size:.8rem">
+          <div><span class="badge bg-secondary me-2">Nháp</span>Đang soạn thảo</div>
+          <div><span class="badge bg-info text-dark me-2">Đang TH</span>Đang thực hiện</div>
+          <div><span class="badge bg-success me-2">Hoàn thành</span>Đã nghiệm thu</div>
+          <div><span class="badge bg-danger me-2">Chấm dứt</span>Hủy trước hạn</div>
+          <div><span class="badge bg-secondary me-2">Hết hạn</span>Quá ngày kết thúc</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const progInput = document.querySelector('[name="progress_percent"]');
+  const progBar   = document.getElementById('prog-bar');
+  if (progInput && progBar) {
+    progBar.style.width = (progInput.value || 0) + '%';
+    progInput.addEventListener('input', function () {
+      progBar.style.width = Math.min(Math.max(this.value || 0, 0), 100) + '%';
+    });
+  }
+});
+</script>
 {% endblock %}

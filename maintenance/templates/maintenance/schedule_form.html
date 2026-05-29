@@ -1,31 +1,331 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Schedule Form" }}</h4>
+<div class="d-flex align-items-center mb-4">
+  <a href="{% url 'maintenance:schedule_list' %}" class="btn btn-sm btn-outline-secondary me-3">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h4 class="fw-bold mb-0">
+      <i class="bi bi-calendar-plus text-primary me-2"></i>{{ page_title }}
+    </h4>
+    <small class="text-muted">
+      {% if schedule %}Cập nhật lịch bảo trì #{{ schedule.pk }}{% else %}Tạo lịch bảo trì mới{% endif %}
+    </small>
+  </div>
 </div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-4">
+
+    {# ── Cột trái: Form chính ── #}
+    <div class="col-lg-8">
+
+      {# 1. Thông tin cơ bản #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent py-3">
+          <span class="fw-bold">
+            <span class="badge bg-primary rounded-circle me-2" style="font-size:.7rem">1</span>
+            Thông tin cơ bản
+          </span>
+        </div>
+        <div class="card-body">
+
+          {# item_name #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">
+              Tên hạng mục <span class="text-danger">*</span>
+            </label>
+            {{ form.item_name }}
+            {% if form.item_name.errors %}
+              <div class="invalid-feedback d-block">{{ form.item_name.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          {# description #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">Mô tả chi tiết</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+              <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="row g-3">
+            {# priority #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Độ ưu tiên <span class="text-danger">*</span>
+              </label>
+              {{ form.priority }}
+              {% if form.priority.errors %}
+                <div class="invalid-feedback d-block">{{ form.priority.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            {# status #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Trạng thái</label>
+              {{ form.status }}
+              {% if form.status.errors %}
+                <div class="invalid-feedback d-block">{{ form.status.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {# 2. Hạng mục hạ tầng #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent py-3">
+          <span class="fw-bold">
+            <span class="badge bg-primary rounded-circle me-2" style="font-size:.7rem">2</span>
+            Hạng mục hạ tầng
+          </span>
+        </div>
+        <div class="card-body">
+
+          {# infra_type — chọn loại → reload danh sách #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">
+              Phân loại <span class="text-danger">*</span>
+            </label>
+            {{ form.infra_type }}
+            {% if form.infra_type.errors %}
+              <div class="invalid-feedback d-block">{{ form.infra_type.errors.0 }}</div>
+            {% endif %}
+            <div class="form-text">Chọn loại rồi chọn hạng mục bên dưới</div>
+          </div>
+
+          {# infrastructure — dropdown được form build theo infra_type #}
+          <div class="mb-0">
+            <label class="form-label fw-semibold small">
+              Hạ tầng / Tuyến đường <span class="text-danger">*</span>
+            </label>
+            {{ form.infrastructure }}
+            {% if form.infrastructure.errors %}
+              <div class="invalid-feedback d-block">{{ form.infrastructure.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+
+      {# 3. Thời gian #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent py-3">
+          <span class="fw-bold">
+            <span class="badge bg-primary rounded-circle me-2" style="font-size:.7rem">3</span>
+            Thời gian thực hiện
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            {# start_date #}
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">
+                Ngày bắt đầu <span class="text-danger">*</span>
+              </label>
+              {{ form.start_date }}
+              {% if form.start_date.errors %}
+                <div class="invalid-feedback d-block">{{ form.start_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            {# end_date #}
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">
+                Ngày kết thúc <span class="text-danger">*</span>
+              </label>
+              {{ form.end_date }}
+              {% if form.end_date.errors %}
+                <div class="invalid-feedback d-block">{{ form.end_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            {# estimated_days #}
+            <div class="col-md-4">
+              <label class="form-label fw-semibold small">
+                Số ngày thực hiện <span class="text-danger">*</span>
+              </label>
+              {{ form.estimated_days }}
+              {% if form.estimated_days.errors %}
+                <div class="invalid-feedback d-block">{{ form.estimated_days.errors.0 }}</div>
+              {% endif %}
+              <div class="form-text">Số nguyên, lớn hơn 0</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {# 4. Chi phí & Nhân sự #}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent py-3">
+          <span class="fw-bold">
+            <span class="badge bg-primary rounded-circle me-2" style="font-size:.7rem">4</span>
+            Chi phí & Phân công
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+
+            {# cost #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">
+                Chi phí dự kiến (VNĐ) <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                {{ form.cost }}
+                <span class="input-group-text">₫</span>
+              </div>
+              {% if form.cost.errors %}
+                <div class="invalid-feedback d-block">{{ form.cost.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            {# assigned_to #}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Người phụ trách</label>
+              {{ form.assigned_to }}
+              {% if form.assigned_to.errors %}
+                <div class="invalid-feedback d-block">{{ form.assigned_to.errors.0 }}</div>
+              {% endif %}
+              <div class="form-text">Có thể để trống và phân công sau</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {# Non-field errors #}
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {% for err in form.non_field_errors %}
+        <div><i class="bi bi-exclamation-triangle me-2"></i>{{ err }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Buttons #}
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'maintenance:schedule_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x me-1"></i>Hủy
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-calendar-check me-1"></i>
+          {% if schedule %}Cập nhật lịch{% else %}Tạo lịch bảo trì{% endif %}
+        </button>
+      </div>
+
+    </div>
+
+    {# ── Cột phải: Hướng dẫn ── #}
+    <div class="col-lg-4">
+
+      {# Tips #}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent py-3">
+          <span class="fw-bold small">
+            <i class="bi bi-lightbulb text-warning me-2"></i>Hướng dẫn
+          </span>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled small text-muted mb-0">
+            <li class="mb-2 d-flex gap-2">
+              <i class="bi bi-1-circle-fill text-primary flex-shrink-0 mt-1"></i>
+              <span>Chọn <strong>Phân loại</strong> trước: Tuyến đường hoặc Hạ tầng</span>
+            </li>
+            <li class="mb-2 d-flex gap-2">
+              <i class="bi bi-2-circle-fill text-primary flex-shrink-0 mt-1"></i>
+              <span>Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu</span>
+            </li>
+            <li class="mb-2 d-flex gap-2">
+              <i class="bi bi-3-circle-fill text-primary flex-shrink-0 mt-1"></i>
+              <span>Chi phí dự kiến phải lớn hơn 0</span>
+            </li>
+            <li class="d-flex gap-2">
+              <i class="bi bi-4-circle-fill text-primary flex-shrink-0 mt-1"></i>
+              <span>Sau khi tạo có thể phân công thêm nhân viên qua trang danh sách</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {# Thông tin lịch hiện tại (khi update) #}
+      {% if schedule %}
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent py-3">
+          <span class="fw-bold small">
+            <i class="bi bi-clock-history text-secondary me-2"></i>Thông tin hiện tại
+          </span>
+        </div>
+        <div class="card-body">
+          <dl class="row small mb-0">
+            <dt class="col-6 text-muted fw-normal">Mã lịch</dt>
+            <dd class="col-6">#{{ schedule.pk }}</dd>
+
+            <dt class="col-6 text-muted fw-normal">Trạng thái</dt>
+            <dd class="col-6">
+              <span class="badge
+                {% if schedule.status == 'completed' %}bg-success
+                {% elif schedule.status == 'in_progress' %}bg-info
+                {% elif schedule.status == 'postponed' %}bg-danger
+                {% else %}bg-warning text-dark{% endif %}">
+                {{ schedule.get_status_display }}
+              </span>
+            </dd>
+
+            <dt class="col-6 text-muted fw-normal">Tạo bởi</dt>
+            <dd class="col-6">{{ schedule.created_by.get_full_name|default:"—" }}</dd>
+
+            <dt class="col-6 text-muted fw-normal">Ngày tạo</dt>
+            <dd class="col-6">{{ schedule.created_at|date:"d/m/Y" }}</dd>
+
+            {% if schedule.road %}
+            <dt class="col-6 text-muted fw-normal">Tuyến đường</dt>
+            <dd class="col-6">{{ schedule.road.name }}</dd>
+            {% elif schedule.infrastructure %}
+            <dt class="col-6 text-muted fw-normal">Hạ tầng</dt>
+            <dd class="col-6">{{ schedule.infrastructure.name }}</dd>
+            {% endif %}
+
+            <dt class="col-6 text-muted fw-normal">Phụ trách</dt>
+            <dd class="col-6">
+              {% for u in schedule.assigned_to.all %}
+                {{ u.get_full_name|default:u.username }}{% if not forloop.last %}, {% endif %}
+              {% empty %}—{% endfor %}
+            </dd>
+          </dl>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
 </form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Schedule Form</div></div>
-{% endif %}
+
+<script>
+/*
+  Khi người dùng đổi "Phân loại" (infra_type),
+  submit lại form để form.__init__ rebuild danh sách infrastructure
+*/
+(function () {
+  var infraTypeSelect = document.querySelector('select[name="infra_type"]');
+  if (!infraTypeSelect) return;
+
+  infraTypeSelect.addEventListener('change', function () {
+    /* Thêm input ẩn để báo hiệu chỉ refresh dropdown, không save */
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = '_infra_type_changed';
+    input.value = '1';
+    infraTypeSelect.closest('form').appendChild(input);
+    infraTypeSelect.closest('form').submit();
+  });
+})();
+</script>
 {% endblock %}

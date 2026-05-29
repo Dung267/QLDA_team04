@@ -1,31 +1,106 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold">{{ page_title|default:"Stats" }}</h4>
-</div>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button>
-<a href="javascript:history.back()" class="btn btn-outline-secondary ms-2">Hủy</a>
-</form>
-</div></div>
-{% elif page_obj %}
-<div class="card"><div class="card-body p-0">
-<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.85rem">
-<thead class="table-light"><tr><th>#</th><th>Nội dung</th><th>Ngày tạo</th></tr></thead>
-<tbody>
-{% for item in page_obj %}<tr><td>{{ forloop.counter }}</td><td>{{ item }}</td><td>—</td></tr>
-{% empty %}<tr><td colspan="3" class="text-center py-4 text-muted">Chưa có dữ liệu</td></tr>{% endfor %}
-</tbody></table></div>
-{% if page_obj.has_other_pages %}<div class="p-3 text-center">
-<a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_previous %}disabled{% endif %}">‹</a>
-<span class="mx-2 text-muted small">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-<a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary {% if not page_obj.has_next %}disabled{% endif %}">›</a>
-</div>{% endif %}
-</div></div>
-{% else %}
-<div class="card"><div class="card-body text-center py-4 text-muted">Nội dung trang Stats</div></div>
-{% endif %}
+    <div class="container mt-4">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold mb-0">
+                <i class="bi bi-graph-up-arrow me-2 text-primary"></i>{{ page_title }}
+            </h2>
+            <a href="{% url 'feedback:list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+            </a>
+        </div>
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-6">
+                <div class="card bg-primary text-white h-100 shadow-sm border-0">
+                    <div class="card-body d-flex justify-content-between align-items-center p-4">
+                        <div>
+                            <h5 class="card-title fw-normal mb-1">Tổng số phản hồi</h5>
+                            <h1 class="display-4 fw-bold mb-0">{{ stats.total }}</h1>
+                        </div>
+                        <i class="bi bi-chat-square-text text-white opacity-50"
+                           style="font-size: 4rem"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="card bg-warning text-dark h-100 shadow-sm border-0">
+                    <div class="card-body d-flex justify-content-between align-items-center p-4">
+                        <div>
+                            <h5 class="card-title fw-normal mb-1">Điểm đánh giá trung bình</h5>
+                            <h1 class="display-4 fw-bold mb-0">
+                                {{ stats.avg_rating|floatformat:1|default:"0.0" }} <span class="fs-4 fw-normal">/ 5.0</span>
+                            </h1>
+                        </div>
+                        <i class="bi bi-star-fill text-dark opacity-50" style="font-size: 4rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white fw-bold py-3">
+                        <i class="bi bi-bar-chart-fill text-primary"></i> Phân bố theo đánh giá
+                    </div>
+                    <div class="card-body">
+                        {% for item in stats.by_rating %}
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="text-warning fw-bold" style="width: 70px;">{{ item.rating }} Sao</div>
+                                <div class="progress flex-grow-1 mx-3"
+                                     style="height: 22px"
+                                     aria-label="Thanh tỷ lệ đánh giá">
+                                    {% widthratio item.count stats.total 100 as bar_width %}
+                                    <div class="progress-bar bg-warning text-dark fw-bold js-rating-bar"
+                                         role="progressbar"
+                                         data-width="{{ bar_width }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100"
+                                         aria-valuenow="{{ bar_width }}"
+                                         style="width: 0%">{{ bar_width }}%</div>
+                                </div>
+                                <div style="width: 48px;" class="text-end text-muted fw-bold">{{ item.count }}</div>
+                            </div>
+                        {% empty %}
+                            <p class="text-center text-muted py-4">Chưa có dữ liệu đánh giá</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white fw-bold py-3">
+                        <i class="bi bi-pie-chart-fill text-success"></i> Tình trạng xử lý
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for item in stats.by_status %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                {% if item.status == 'new' %}
+                                    <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 fw-normal">Mới tiếp nhận</span>
+                                {% elif item.status == 'reviewed' %}
+                                    <span class="badge bg-info text-dark rounded-pill px-3 py-2 fs-6 fw-normal">Đang xem xét</span>
+                                {% elif item.status == 'resolved' %}
+                                    <span class="badge bg-success rounded-pill px-3 py-2 fs-6 fw-normal">Đã giải quyết</span>
+                                {% elif item.status == 'hidden' %}
+                                    <span class="badge bg-secondary rounded-pill px-3 py-2 fs-6 fw-normal">Đã ẩn/Thùng rác</span>
+                                {% else %}
+                                    <span class="badge bg-dark rounded-pill px-3 py-2 fs-6 fw-normal">{{ item.status }}</span>
+                                {% endif %}
+                                <span class="fw-bold fs-5">{{ item.count }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item text-center text-muted py-4">Chưa có dữ liệu xử lý</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block extra_js %}
+    <script>
+  document.querySelectorAll(".js-rating-bar").forEach((bar) => {
+    const width = Number(bar.dataset.width || 0);
+    bar.style.width = `${width}%`;
+  });
+    </script>
 {% endblock %}
