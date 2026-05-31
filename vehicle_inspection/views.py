@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
 from django.urls import reverse_lazy
 from django.db.models import OuterRef, Subquery, Max, F, Q
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 
 from .models import Vehicle, Inspection, InspectionCenter
 from .forms import VehicleForm, ScheduleInspectionForm, InspectionResultForm, PaymentForm
@@ -62,7 +62,6 @@ class VehicleListView(LoginRequiredMixin, ListView):
         # Tính toán trạng thái hạn đăng kiểm cho mỗi xe
         for vehicle in context['vehicles']:
             vehicle.expiry_date = getattr(vehicle, "inspection_expiry", None)
-            vehicle.expiry_status = vehicle.get_expiry_status()
 
         context['page_title'] = 'Quản lý phương tiện'
         context['page_description'] = 'Theo dõi hạn đăng kiểm phương tiện'
@@ -354,7 +353,7 @@ def cancel_inspection(request, pk):
         'inspection': inspection,
         'page_title': 'Xác nhận hủy lịch',
     }
-    return render(request, 'vehicle_inspection/cancel_confirm.html', context)
+    return redirect('vehicle_inspection:inspection_detail', pk=pk)
 
 
 @login_required
@@ -396,84 +395,4 @@ def pay_inspection_fee(request, pk):
         'form': form,
         'page_title': 'Thanh toán phí đăng kiểm',
     }
-    return render(request, 'vehicle_inspection/payment_confirm.html', context)
-
-
-def _pdf_text(value):
-    import unicodedata
-
-    text = str(value or "")
-    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-
-
-@login_required
-def inspection_certificate_pdf(request, pk):
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import cm
-    from reportlab.pdfgen import canvas as rl_canvas
-
-    inspection = get_object_or_404(
-        Inspection.objects.select_related("vehicle", "vehicle__owner", "center", "inspector"),
-        pk=pk,
-    )
-    if not request.user.is_staff and inspection.vehicle.owner_id != request.user.id:
-        return HttpResponseForbidden("Ban khong co quyen in chung nhan nay.")
-    if inspection.status != "passed":
-        return HttpResponseForbidden("Chi co the in chung nhan cho ket qua dat.")
-
-    filename = f"chung_nhan_dang_kiem_{inspection.vehicle.license_plate}.pdf"
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-
-    p = rl_canvas.Canvas(response, pagesize=A4)
-    width, height = A4
-
-    p.setFillColor(colors.HexColor("#198754"))
-    p.rect(0, height - 3.2 * cm, width, 3.2 * cm, fill=True, stroke=False)
-    p.setFillColor(colors.white)
-    p.setFont("Helvetica-Bold", 16)
-    p.drawCentredString(width / 2, height - 1.45 * cm, "GIAY CHUNG NHAN DANG KIEM")
-    p.setFont("Helvetica", 11)
-    p.drawCentredString(width / 2, height - 2.25 * cm, "He thong quan ly dang kiem phuong tien Da Nang")
-
-    y = height - 4.2 * cm
-    rows = [
-        ("So chung nhan", inspection.certificate_number or f"DK-{inspection.pk}"),
-        ("Bien so", inspection.vehicle.license_plate),
-        ("Loai xe", inspection.vehicle.get_vehicle_type_display()),
-        ("Hang/Model", f"{inspection.vehicle.brand} {inspection.vehicle.model}".strip()),
-        ("Chu xe", inspection.vehicle.owner.get_full_name() or inspection.vehicle.owner.username),
-        ("Trung tam", inspection.center.name if inspection.center else ""),
-        ("Ngay kiem dinh", inspection.scheduled_date.strftime("%d/%m/%Y")),
-        ("Hieu luc den", inspection.valid_until.strftime("%d/%m/%Y") if inspection.valid_until else ""),
-        ("Can bo kiem tra", inspection.inspector.get_full_name() if inspection.inspector else ""),
-        ("Phi", f"{inspection.fee:,.0f} VND" if inspection.fee else "0 VND"),
-    ]
-
-    p.setFillColor(colors.black)
-    for label, value in rows:
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(2 * cm, y, f"{label}:")
-        p.setFont("Helvetica", 10)
-        p.drawString(6 * cm, y, _pdf_text(value)[:95])
-        y -= 0.65 * cm
-
-    y -= 0.5 * cm
-    p.setFont("Helvetica-Bold", 11)
-    p.drawString(2 * cm, y, "Ghi chu ky thuat")
-    y -= 0.6 * cm
-    p.setFont("Helvetica", 10)
-    notes = _pdf_text(inspection.technical_notes or "Phuong tien dat yeu cau dang kiem.")
-    for line in [notes[i:i + 100] for i in range(0, len(notes), 100)][:5]:
-        p.drawString(2 * cm, y, line)
-        y -= 0.5 * cm
-
-    y = max(y - 1 * cm, 4 * cm)
-    p.line(11 * cm, y, 18 * cm, y)
-    p.setFont("Helvetica", 10)
-    p.drawString(12.2 * cm, y - 0.5 * cm, "Can bo dang kiem")
-
-    p.showPage()
-    p.save()
-    return response
+    return redirect('vehicle_inspection:inspection_detail', pk=pk)

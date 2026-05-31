@@ -46,9 +46,8 @@ class SurveyResponseForm(forms.ModelForm):
         model = SurveyResponse
         fields = ["satisfaction_score", "comments"]
         widgets = {
-            "satisfaction_score": forms.NumberInput(
+            "satisfaction_score": forms.HiddenInput(
                 attrs={
-                    "class": "form-control",
                     "min": 1,
                     "max": 5,
                     "step": 1,

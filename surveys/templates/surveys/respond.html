@@ -84,7 +84,7 @@
             </div>
         </div>
         <!-- THỐNG KÊ CHỈ MANAGER -->
-        {% if show_stats %}
+        {% if request.user.is_manager %}
             {% if show_stats %}
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-white fw-bold py-3">
@@ -153,7 +153,7 @@
             {% endif %}
         {% endif %}
         <!-- FORM KHẢO SÁT -->
-        {% if not show_stats %}
+        {% if not request.user.is_manager %}
             {% if not show_stats %}
                 <div class="row justify-content-center">
                     <div class="col-12 col-lg-8 col-xl-7">
@@ -169,9 +169,7 @@
                                     <span class="badge text-bg-light border text-secondary">Chưa tham gia</span>
                                 </div>
                                 <form method="post" novalidate>
-                                    {% csrf_token %}
-                                    <div class="small text-muted mb-2">Chưa chọn đánh giá</div>
-                                    {{ form.as_p }}
+                                    {% csrf_token %} {{ form.as_p }}
                                     <div class="d-flex flex-wrap gap-2">
                                         <button type="submit" class="btn btn-primary">
                                             <i class="bi bi-send me-1"></i>Gửi phản hồi

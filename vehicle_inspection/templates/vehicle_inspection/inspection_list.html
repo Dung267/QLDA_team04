@@ -1,111 +1,103 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <div>
-    <h4 class="fw-bold mb-1">{{ page_title }}</h4>
-    <p class="text-muted mb-0">Theo doi lich hen, ket qua, thanh toan va chung nhan dang kiem.</p>
-  </div>
-  <a href="{% url 'vehicle_inspection:schedule' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-calendar-plus me-1"></i>Dat lich moi
-  </a>
-</div>
-
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <form method="get" class="row g-2 align-items-end">
-      <div class="col-12 col-md-4">
-        <label for="status" class="form-label mb-1">Loc theo trang thai</label>
-        <select name="status" id="status" class="form-select">
-          <option value="">Tat ca</option>
-          {% for value, label in status_choices %}
-            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-12 col-md-auto d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Tra cuu</button>
-        <a href="{% url 'vehicle_inspection:inspection_list' %}" class="btn btn-outline-secondary">Xoa loc</a>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="card border-0 shadow-sm">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th class="ps-3">Bien so</th>
-            <th>Ngay hen</th>
-            <th>Trung tam</th>
-            <th>Trang thai</th>
-            <th>Phi</th>
-            <th class="pe-3 text-end">Thao tac</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inspection in inspections %}
-          <tr>
-            <td class="ps-3 fw-semibold">{{ inspection.vehicle.license_plate }}</td>
-            <td>{{ inspection.scheduled_date|date:"d/m/Y H:i" }}</td>
-            <td>{{ inspection.center.name|default:"Chua chon trung tam" }}</td>
-            <td><span class="badge {{ inspection.status_badge_class }}">{{ inspection.status_label }}</span></td>
-            <td>
-              {% if inspection.fee %}
-                {{ inspection.fee|floatformat:0 }} VND
-                {% if inspection.is_fee_paid %}
-                  <span class="badge text-bg-success ms-1">Da tra</span>
-                {% else %}
-                  <span class="badge text-bg-warning ms-1">Chua tra</span>
-                {% endif %}
-              {% else %}
-                <span class="text-muted">Chua co</span>
-              {% endif %}
-            </td>
-            <td class="pe-3 text-end">
-              <div class="d-inline-flex gap-1">
-                <a href="{% url 'vehicle_inspection:inspection_detail' inspection.pk %}" class="btn btn-sm btn-outline-primary">Chi tiet</a>
-                {% if inspection.can_update %}
-                  <a href="{% url 'vehicle_inspection:update' inspection.pk %}" class="btn btn-sm btn-outline-secondary">Cap nhat</a>
-                {% endif %}
-                {% if inspection.can_pay %}
-                  <a href="{% url 'vehicle_inspection:pay' inspection.pk %}" class="btn btn-sm btn-outline-success">Thanh toan</a>
-                {% endif %}
-                {% if inspection.status == "passed" %}
-                  <a href="{% url 'vehicle_inspection:certificate_pdf' inspection.pk %}" class="btn btn-sm btn-outline-danger">PDF</a>
-                {% endif %}
-                {% if inspection.can_cancel %}
-                  <a href="{% url 'vehicle_inspection:cancel' inspection.pk %}" class="btn btn-sm btn-outline-danger">Huy</a>
-                {% endif %}
-              </div>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center py-5 text-muted">Chua co lich dang kiem nao.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h4 class="fw-bold mb-1">{{ page_title }}</h4>
+            <p class="text-muted mb-0">Theo doi cac lich hen dang kiem phuong tien.</p>
+        </div>
+        <a href="{% url 'vehicle_inspection:schedule' %}"
+           class="btn btn-primary btn-sm"><i class="bi bi-calendar-plus me-1"></i>Dat lich moi</a>
     </div>
-  </div>
-</div>
-
-{% if page_obj.has_other_pages %}
-<div class="d-flex justify-content-center gap-2 mt-3">
-  {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="btn btn-sm btn-outline-secondary">Truoc</a>
-  {% else %}
-    <button class="btn btn-sm btn-outline-secondary" disabled>Truoc</button>
-  {% endif %}
-  <span class="small text-muted align-self-center">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
-  {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}" class="btn btn-sm btn-outline-secondary">Sau</a>
-  {% else %}
-    <button class="btn btn-sm btn-outline-secondary" disabled>Sau</button>
-  {% endif %}
-</div>
-{% endif %}
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="status" class="form-label mb-1">Loc theo trang thai chi tiet</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">Tat ca</option>
+                        {% for value, label in status_choices %}
+                            <option
+                                value="{{ value }}"
+                                {%
+                                if
+                                selected_status=""
+                                ="value"
+                                %}selected{%
+                                endif
+                                %}
+                                >{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Tra cuu</button>
+                    <a href="{% url 'vehicle_inspection:inspection_list' %}"
+                       class="btn btn-outline-secondary">Xoa loc</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Bien so</th>
+                            <th>Ngay hen</th>
+                            <th>Trung tam</th>
+                            <th>Tien trinh backlog</th>
+                            <th>Trang thai he thong</th>
+                            <th class="pe-3 text-end">Thao tac</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inspection in inspections %}
+                            <tr>
+                                <td class="ps-3 fw-semibold">{{ inspection.vehicle.license_plate }}</td>
+                                <td>{{ inspection.scheduled_date|date:"d/m/Y" }}</td>
+                                <td>
+                                    {{ inspection.center.name|default:"Trung tam Dang kiem xe co gioi
+                                    43-01S, Quan Cam Le" }}
+                                </td>
+                                <td>
+                                    <span class="badge {{ inspection.workflow_badge }}">{{ inspection.workflow_label }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge text-bg-light border text-dark">{{ inspection.get_status_display }}</span>
+                                </td>
+                                <td class="pe-3 text-end">
+                                    {% if inspection.can_cancel %}
+                                        <a href="{% url 'vehicle_inspection:cancel' inspection.pk %}"
+                                           class="btn btn-sm btn-outline-danger">Huy lich</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">Chua co lich dang kiem nao.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% if page_obj.has_other_pages %}
+        <div class="d-flex justify-content-center gap-2 mt-3">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}"
+                   class="btn btn-sm btn-outline-secondary">‹</a>
+            {% else %}
+                <button class="btn btn-sm btn-outline-secondary" disabled>‹</button>
+            {% endif %}
+            <span class="small text-muted align-self-center">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}"
+                   class="btn btn-sm btn-outline-secondary">›</a>
+            {% else %}
+                <button class="btn btn-sm btn-outline-secondary" disabled>›</button>
+            {% endif %}
+        </div>
+    {% endif %}
 {% endblock %}

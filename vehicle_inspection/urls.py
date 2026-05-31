@@ -13,7 +13,6 @@ urlpatterns = [
     path('', views.InspectionListView.as_view(), name='inspection_list'),
     path('schedule/', views.ScheduleInspectionView.as_view(), name='schedule'), # Đã sửa tên View
     path('<int:pk>/', views.InspectionDetailView.as_view(), name='inspection_detail'), # Bổ sung trang chi tiết
-    path('<int:pk>/certificate/', views.inspection_certificate_pdf, name='certificate_pdf'),
     
     # --- Các thao tác (Actions) ---
     path('<int:pk>/cancel/', views.cancel_inspection, name='cancel'),

@@ -41,6 +41,8 @@ class Vehicle(models.Model):
         code='invalid_license_plate'
     )
 
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='vehicles', verbose_name='Chủ xe')
+    
     # 2. Gắn validator vào trường license_plate
     license_plate = models.CharField(
         'Biển số xe', 

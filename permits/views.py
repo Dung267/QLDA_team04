@@ -8,7 +8,6 @@ from django.views.generic import ListView, DetailView, CreateView
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
-from django.http import HttpResponse, HttpResponseForbidden
 from .models import ConstructionPermit, PermitDocument
 from .forms import PermitForm
 
@@ -218,98 +217,6 @@ def process_permit(request, pk):
         messages.error(request, "Hanh dong khong hop le.")
 
     return redirect("permits:detail", pk=pk)
-
-
-def _can_manage_or_own_permit(user, permit):
-    if not user.is_authenticated:
-        return False
-    is_staff_user = user.is_superuser or getattr(user, "is_staff_member", False) or user.is_staff
-    return is_staff_user or permit.applicant_id == user.id
-
-
-def _pdf_text(value):
-    import unicodedata
-
-    text = str(value or "")
-    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-
-
-@login_required
-def permit_pdf(request, pk):
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import cm
-    from reportlab.pdfgen import canvas as rl_canvas
-
-    permit = get_object_or_404(
-        ConstructionPermit.objects.select_related("applicant", "approved_by"),
-        pk=pk,
-    )
-    if not _can_manage_or_own_permit(request.user, permit):
-        return HttpResponseForbidden("Ban khong co quyen in giay phep nay.")
-    if permit.status not in {"approved", "construction", "completed"}:
-        return HttpResponseForbidden("Chi co the in giay phep da duoc phe duyet.")
-
-    filename = f"giay_phep_{permit.permit_number or permit.pk}.pdf"
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-
-    p = rl_canvas.Canvas(response, pagesize=A4)
-    width, height = A4
-    y = height - 2 * cm
-
-    p.setFillColor(colors.HexColor("#0d6efd"))
-    p.rect(0, height - 3.2 * cm, width, 3.2 * cm, fill=True, stroke=False)
-    p.setFillColor(colors.white)
-    p.setFont("Helvetica-Bold", 17)
-    p.drawCentredString(width / 2, height - 1.45 * cm, "GIAY PHEP THI CONG")
-    p.setFont("Helvetica", 11)
-    p.drawCentredString(width / 2, height - 2.25 * cm, "He thong quan ly ha tang do thi Da Nang")
-
-    y -= 3.8 * cm
-    p.setFillColor(colors.black)
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(2 * cm, y, "Thong tin giay phep")
-    y -= 0.8 * cm
-
-    rows = [
-        ("So giay phep", permit.permit_number or f"GP-{permit.pk}"),
-        ("Ten cong trinh", permit.title),
-        ("Chu dau tu/nguoi nop", permit.applicant.get_full_name() or permit.applicant.username),
-        ("Nha thau", permit.contractor_name or "Chua cap nhat"),
-        ("Dia diem", permit.location),
-        ("Ngay khoi cong", permit.start_date.strftime("%d/%m/%Y") if permit.start_date else ""),
-        ("Ngay ket thuc", permit.end_date.strftime("%d/%m/%Y") if permit.end_date else ""),
-        ("Ngay cap", permit.issued_at.strftime("%d/%m/%Y") if permit.issued_at else ""),
-        ("Nguoi phe duyet", permit.approved_by.get_full_name() if permit.approved_by else ""),
-    ]
-
-    for label, value in rows:
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(2 * cm, y, f"{label}:")
-        p.setFont("Helvetica", 10)
-        p.drawString(6 * cm, y, _pdf_text(value)[:95])
-        y -= 0.65 * cm
-
-    y -= 0.4 * cm
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(2 * cm, y, "Mo ta cong trinh")
-    y -= 0.7 * cm
-    p.setFont("Helvetica", 10)
-    for line in [_pdf_text(permit.description)[i:i + 95] for i in range(0, len(_pdf_text(permit.description)), 95)][:6]:
-        p.drawString(2 * cm, y, line)
-        y -= 0.5 * cm
-
-    y = max(y - 1 * cm, 4 * cm)
-    p.line(2 * cm, y, 8 * cm, y)
-    p.line(12 * cm, y, 18 * cm, y)
-    p.setFont("Helvetica", 10)
-    p.drawString(3 * cm, y - 0.5 * cm, "Dai dien don vi")
-    p.drawString(13 * cm, y - 0.5 * cm, "Can bo phe duyet")
-
-    p.showPage()
-    p.save()
-    return response
 
 
 @login_required
