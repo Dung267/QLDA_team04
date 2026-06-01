@@ -100,11 +100,11 @@
             </div>
         </div>
     </div>
-    {% if request.user.is_manager %}
+    {% if request.user.is_manager or request.user.is_admin %}
         <div class="card border-primary shadow-sm mt-4 mb-5">
             <div class="card-header bg-primary text-white d-flex align-items-center">
                 <i class="bi bi-shield-lock-fill me-2 fs-5"></i>
-                <h6 class="mb-0 fw-bold">Bảng điều khiển dành cho Cán bộ</h6>
+                <h6 class="mb-0 fw-bold">Bảng điều khiển dành cho Cán bộ, quản trị viên</h6>
             </div>
             <div class="card-body p-4">
                 <form method="post" action="{% url 'permits:process' permit.pk %}">

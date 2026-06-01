@@ -145,12 +145,6 @@
                    class="btn btn-outline-warning" title="Xuất kho">
                   <i class="bi bi-box-arrow-up"></i>
                 </a>
-                {% if user.is_staff %}
-                <a href="{% url 'inventory:material_edit' mat.pk %}"
-                   class="btn btn-outline-secondary" title="Chỉnh sửa">
-                  <i class="bi bi-pencil"></i>
-                </a>
-                {% endif %}
               </div>
             </td>
           </tr>
