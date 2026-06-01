@@ -6,7 +6,7 @@
     <h4 class="fw-bold mb-1">Danh sách hạ tầng</h4>
     <p class="text-muted mb-0">Quản lý cầu, hầm, cống và các công trình hạ tầng khác</p>
   </div>
-  {% if user.is_staff %}
+  {% if user.is_manager %}
   <a href="{% url 'infrastructure:infra_create' %}" class="btn btn-primary btn-sm">
     <i class="bi bi-plus-circle me-1"></i>Thêm hạ tầng
   </a>

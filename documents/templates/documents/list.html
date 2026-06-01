@@ -170,7 +170,7 @@
                                                    title="Tải xuống">
                                                     <i class="bi bi-download"></i>
                                                 </a>
-                                                {% if user.is_staff %}
+                                                {% if user.is_staff or user.is_manager or user.is_admin %}
                                                     <a href="{% url 'documents:detail' document.id %}"
                                                        class="btn btn-outline-secondary"
                                                        title="Chi tiết">
