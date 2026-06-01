@@ -2,8 +2,10 @@
 __pycache__/
 *.pyc
 .env
-db.sqlite3
-media/
+# Demo/shared data for this project can be committed when needed.
+# Keep .env ignored; it contains secrets and machine-specific config.
+# db.sqlite3
+# media/
 staticfiles/
 .coverage
 htmlcov/
