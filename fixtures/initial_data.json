@@ -3,22 +3,18 @@
     "model": "infrastructure.infrastructuretype",
     "pk": 1,
     "fields": {
-      "name": "Cầu",
+      "name": "Cầu giao thông",
       "code": "BRIDGE",
-      "description": "Cầu đường bộ",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "description": "Các công trình cầu phục vụ giao thông đường bộ."
     }
   },
   {
     "model": "infrastructure.infrastructuretype",
     "pk": 2,
     "fields": {
-      "name": "Hầm chui",
+      "name": "Hầm giao thông",
       "code": "TUNNEL",
-      "description": "Hầm đường bộ",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "description": "Hệ thống hầm giao thông đô thị."
     }
   },
   {
@@ -27,327 +23,207 @@
     "fields": {
       "name": "Cống thoát nước",
       "code": "DRAIN",
-      "description": "Hệ thống thoát nước",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "description": "Hệ thống thoát nước đô thị."
     }
   },
   {
     "model": "infrastructure.infrastructuretype",
     "pk": 4,
     "fields": {
-      "name": "Biển báo",
-      "code": "SIGN",
-      "description": "Biển báo giao thông",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "name": "Camera giao thông",
+      "code": "CAMERA",
+      "description": "Camera giám sát giao thông."
     }
   },
-  {
-    "model": "infrastructure.infrastructuretype",
-    "pk": 5,
-    "fields": {
-      "name": "Vỉa hè",
-      "code": "SIDEWALK",
-      "description": "Vỉa hè, hành lang",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
+
   {
     "model": "infrastructure.managementzone",
     "pk": 1,
     "fields": {
-      "name": "Khu vực Hải Châu",
+      "name": "Trung tâm Hải Châu",
       "district": "Hải Châu",
-      "description": "Quận trung tâm",
-      "manager": null,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "description": "Khu vực trung tâm hành chính và thương mại của thành phố Đà Nẵng.",
+      "manager": null
     }
   },
   {
     "model": "infrastructure.managementzone",
     "pk": 2,
     "fields": {
-      "name": "Khu vực Thanh Khê",
-      "district": "Thanh Khê",
-      "description": "Quận phía Tây",
-      "manager": null,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "infrastructure.managementzone",
-    "pk": 3,
-    "fields": {
-      "name": "Khu vực Sơn Trà",
+      "name": "Ven biển Sơn Trà",
       "district": "Sơn Trà",
-      "description": "Quận bán đảo",
-      "manager": null,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "description": "Khu vực ven biển tập trung du lịch và dịch vụ.",
+      "manager": null
+    }
+  },
+  {
+    "model": "infrastructure.managementzone",
+    "pk": 3,
+    "fields": {
+      "name": "Thanh Khê",
+      "district": "Thanh Khê",
+      "description": "Khu dân cư và giao thông nội đô.",
+      "manager": null
     }
   },
   {
     "model": "infrastructure.managementzone",
     "pk": 4,
     "fields": {
-      "name": "Khu vực Ngũ Hành Sơn",
-      "district": "Ngũ Hành Sơn",
-      "description": "Quận phía Nam",
-      "manager": null,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "infrastructure.managementzone",
-    "pk": 5,
-    "fields": {
-      "name": "Khu vực Liên Chiểu",
+      "name": "Liên Chiểu",
       "district": "Liên Chiểu",
-      "description": "Quận phía Bắc",
-      "manager": null,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "description": "Khu vực công nghiệp và cảng biển.",
+      "manager": null
     }
   },
+
   {
-    "model": "documents.documentcategory",
+    "model": "infrastructure.road",
     "pk": 1,
     "fields": {
-      "name": "Thiết kế kỹ thuật",
-      "code": "DESIGN",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "name": "Đường Bạch Đằng",
+      "code": "DN-R001",
+      "direction": "two_way",
+      "status": "good",
+      "quality_score": 5,
+      "length_km": 3.2,
+      "width_m": 24,
+      "lanes": 4,
+      "built_year": 2005,
+      "last_repaired": "2025-03-15",
+      "traffic_density": "high",
+      "zone": 1,
+      "managing_unit": "Sở GTVT Đà Nẵng",
+      "start_point": "Cầu Sông Hàn",
+      "end_point": "Cầu Rồng",
+      "latitude": 16.0678,
+      "longitude": 108.2241,
+      "notes": "Tuyến đường ven sông Hàn.",
+      "created_by": null
     }
   },
   {
-    "model": "documents.documentcategory",
+    "model": "infrastructure.road",
     "pk": 2,
     "fields": {
-      "name": "Hợp đồng",
-      "code": "CONTRACT",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "name": "Đường Nguyễn Văn Linh",
+      "code": "DN-R002",
+      "direction": "two_way",
+      "status": "normal",
+      "quality_score": 4,
+      "length_km": 5.1,
+      "width_m": 32,
+      "lanes": 6,
+      "built_year": 2003,
+      "last_repaired": "2024-09-10",
+      "traffic_density": "very_high",
+      "zone": 1,
+      "managing_unit": "Sở GTVT Đà Nẵng",
+      "start_point": "Sân bay Đà Nẵng",
+      "end_point": "Cầu Rồng",
+      "latitude": 16.0545,
+      "longitude": 108.2202,
+      "notes": "Trục giao thông chính của thành phố.",
+      "created_by": null
     }
   },
   {
-    "model": "documents.documentcategory",
+    "model": "infrastructure.road",
     "pk": 3,
     "fields": {
-      "name": "Báo cáo",
-      "code": "REPORT",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "name": "Đường Võ Nguyên Giáp",
+      "code": "DN-R003",
+      "direction": "two_way",
+      "status": "good",
+      "quality_score": 5,
+      "length_km": 12.8,
+      "width_m": 30,
+      "lanes": 6,
+      "built_year": 2012,
+      "last_repaired": "2025-01-20",
+      "traffic_density": "high",
+      "zone": 2,
+      "managing_unit": "Sở GTVT Đà Nẵng",
+      "start_point": "Cầu Trần Thị Lý",
+      "end_point": "Nam Ô",
+      "latitude": 16.0863,
+      "longitude": 108.2457,
+      "notes": "Tuyến đường ven biển phục vụ du lịch.",
+      "created_by": null
     }
   },
+
   {
-    "model": "documents.documentcategory",
-    "pk": 4,
-    "fields": {
-      "name": "Quy hoạch",
-      "code": "PLAN",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "documents.documentcategory",
-    "pk": 5,
-    "fields": {
-      "name": "Pháp lý",
-      "code": "LEGAL",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "vehicle_inspection.inspectioncenter",
+    "model": "infrastructure.trafficlight",
     "pk": 1,
     "fields": {
-      "name": "Trung tâm Đăng kiểm 43-01D",
-      "address": "123 Điện Biên Phủ, Hải Châu, Đà Nẵng",
-      "phone": "0236-3822001",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "code": "TL-DN-001",
+      "location": "Ngã tư Nguyễn Văn Linh - Phan Châu Trinh",
+      "road": 2,
+      "status": "active",
+      "installed_date": "2018-06-15",
+      "managing_unit": "Trung tâm Điều hành Giao thông",
+      "latitude": 16.0605,
+      "longitude": 108.2201,
+      "last_bulb_change": "2025-02-10",
+      "operating_hours": "24/7",
+      "zone": 1,
+      "notes": "Hoạt động ổn định."
     }
   },
   {
-    "model": "vehicle_inspection.inspectioncenter",
+    "model": "infrastructure.trafficlight",
     "pk": 2,
     "fields": {
-      "name": "Trung tâm Đăng kiểm 43-02D",
-      "address": "456 Nguyễn Văn Linh, Thanh Khê, Đà Nẵng",
-      "phone": "0236-3812002",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "code": "TL-DN-002",
+      "location": "Ngã tư Võ Nguyên Giáp - Phạm Văn Đồng",
+      "road": 3,
+      "status": "maintenance",
+      "installed_date": "2020-04-12",
+      "managing_unit": "Sở GTVT Đà Nẵng",
+      "latitude": 16.0738,
+      "longitude": 108.2447,
+      "last_bulb_change": "2025-03-20",
+      "operating_hours": "24/7",
+      "zone": 2,
+      "notes": "Đang thay thế bộ điều khiển."
     }
   },
+
   {
-    "model": "chatbot.faq",
+    "model": "infrastructure.infrastructure",
     "pk": 1,
     "fields": {
-      "question": "Làm thế nào để gửi phản ánh sự cố?",
-      "answer": "Để gửi phản ánh, vào mục 'Bảo trì > Gửi phản ánh', chọn loại sự cố, mô tả chi tiết và đính kèm ảnh nếu có. Sau khi gửi, bạn sẽ nhận mã theo dõi.",
-      "category": "Bảo trì",
-      "keywords": "phản ánh,sự cố,báo cáo,gửi phản ánh",
-      "view_count": 150,
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "type": 1,
+      "name": "Cầu Rồng",
+      "code": "INF-BR-001",
+      "status": "good",
+      "installed_date": "2013-03-29",
+      "managing_unit": "Sở GTVT Đà Nẵng",
+      "zone": 1,
+      "latitude": 16.0619,
+      "longitude": 108.2274,
+      "description": "Biểu tượng của thành phố Đà Nẵng.",
+      "expected_lifespan_years": 100,
+      "notes": ""
     }
   },
   {
-    "model": "chatbot.faq",
+    "model": "infrastructure.infrastructure",
     "pk": 2,
     "fields": {
-      "question": "Cách đặt lịch đăng kiểm xe?",
-      "answer": "Vào mục 'Đăng kiểm xe > Đặt lịch', chọn phương tiện, trung tâm đăng kiểm và thời gian mong muốn. Bạn sẽ nhận thông báo xác nhận.",
-      "category": "Đăng kiểm",
-      "keywords": "đăng kiểm,xe,đặt lịch,phương tiện",
-      "view_count": 120,
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "chatbot.faq",
-    "pk": 3,
-    "fields": {
-      "question": "Xin giấy phép thi công cần những gì?",
-      "answer": "Cần: bản vẽ thi công, hồ sơ pháp lý doanh nghiệp, đánh giá tác động hạ tầng. Nộp hồ sơ tại 'Giấy phép thi công > Tạo hồ sơ'.",
-      "category": "Giấy phép",
-      "keywords": "giấy phép,thi công,xin phép,hồ sơ",
-      "view_count": 95,
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "chatbot.faq",
-    "pk": 4,
-    "fields": {
-      "question": "Xem cảnh báo ngập lụt ở đâu?",
-      "answer": "Cảnh báo ngập lụt cập nhật tại mục 'Cảnh báo > Ngập lụt'. Bạn cũng nhận thông báo tự động qua SMS và hệ thống khi có cảnh báo mới.",
-      "category": "Ngập lụt",
-      "keywords": "ngập,lụt,bão,cảnh báo,lũ",
-      "view_count": 200,
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "chatbot.faq",
-    "pk": 5,
-    "fields": {
-      "question": "Theo dõi tiến độ xử lý phản ánh như thế nào?",
-      "answer": "Vào 'Bảo trì > Danh sách phản ánh', tìm phản ánh theo mã hoặc danh sách. Bạn cũng nhận thông báo tự động mỗi khi trạng thái thay đổi.",
-      "category": "Bảo trì",
-      "keywords": "theo dõi,tiến độ,trạng thái,xử lý",
-      "view_count": 80,
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "integration.apiintegration",
-    "pk": 1,
-    "fields": {
-      "name": "SMS Gateway (VNPT)",
-      "api_key": "",
-      "endpoint": "https://api.sms.vnpt.vn/",
-      "status": "inactive",
-      "last_sync": null,
-      "error_message": "",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "integration.apiintegration",
-    "pk": 2,
-    "fields": {
-      "name": "Email Service (SendGrid)",
-      "api_key": "",
-      "endpoint": "https://api.sendgrid.com/v3/",
-      "status": "inactive",
-      "last_sync": null,
-      "error_message": "",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "integration.apiintegration",
-    "pk": 3,
-    "fields": {
-      "name": "OpenWeatherMap API",
-      "api_key": "",
-      "endpoint": "https://api.openweathermap.org/data/2.5/",
-      "status": "inactive",
-      "last_sync": null,
-      "error_message": "",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "integration.apiintegration",
-    "pk": 4,
-    "fields": {
-      "name": "Hệ thống Đăng kiểm Quốc gia",
-      "api_key": "",
-      "endpoint": "https://api.dangkiem.gov.vn/",
-      "status": "inactive",
-      "last_sync": null,
-      "error_message": "",
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "reports.reporttemplate",
-    "pk": 1,
-    "fields": {
-      "name": "Báo cáo tháng - Sự cố hạ tầng",
-      "report_type": "monthly",
-      "description": "Thống kê sự cố theo tháng",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "reports.reporttemplate",
-    "pk": 2,
-    "fields": {
-      "name": "Báo cáo quý - Bảo trì tổng hợp",
-      "report_type": "quarterly",
-      "description": "Thống kê bảo trì theo quý",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
-    }
-  },
-  {
-    "model": "reports.reporttemplate",
-    "pk": 3,
-    "fields": {
-      "name": "Báo cáo năm - Hiệu suất xử lý",
-      "report_type": "yearly",
-      "description": "Đánh giá hiệu suất năm",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00+00:00",
-      "updated_at": "2024-01-01T00:00:00+00:00"
+      "type": 1,
+      "name": "Cầu Sông Hàn",
+      "code": "INF-BR-002",
+      "status": "good",
+      "installed_date": "2000-03-29",
+      "managing_unit": "Sở GTVT Đà Nẵng",
+      "zone": 1,
+      "latitude": 16.0738,
+      "longitude": 108.2242,
+      "description": "Cầu quay nổi tiếng của Đà Nẵng.",
+      "expected_lifespan_years": 80,
+      "notes": ""
     }
   }
 ]

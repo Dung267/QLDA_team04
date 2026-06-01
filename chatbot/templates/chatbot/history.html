@@ -1,19 +1,167 @@
 {% extends "base.html" %}
-{% block title %}Lịch sử chatbot{% endblock %}
+
+{% block extra_css %}
+<style>
+#chat-box {
+    height: 420px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+}
+.msg-user { text-align: right; }
+.msg-user .bubble {
+    background: #3498db;
+    color: #fff;
+    border-radius: 18px 18px 4px 18px;
+    display: inline-block;
+    padding: 10px 16px;
+    max-width: 75%;
+    text-align: left;
+}
+.msg-bot .bubble {
+    background: #fff;
+    color: #333;
+    border-radius: 18px 18px 18px 4px;
+    display: inline-block;
+    padding: 10px 16px;
+    max-width: 75%;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1);
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<h2>Lịch sử hội thoại</h2>
+<h4 class="fw-bold mb-4"><i class="bi bi-chat-dots me-2 text-primary"></i>Hỗ trợ Chatbot</h4>
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white fw-bold d-flex align-items-center gap-2 py-3">
+                <div class="spinner-grow spinner-grow-sm text-success" role="status" style="width: 12px; height: 12px;"></div>
+                Bot hỗ trợ đang hoạt động
+            </div>
+            <div class="card-body p-0">
+                <div id="chat-box" class="p-3">
+                    <div class="msg-bot mb-3">
+                        <div class="bubble">
+                            Xin chào! Tôi là trợ lý ảo của Hệ thống Quản lý Hạ tầng Đô thị 👋<br>
+                            Tôi có thể giúp bạn tra cứu thông tin về:<br><br>
+                            🛣️ <strong>Hạ tầng & Sự cố:</strong> Báo cáo ổ gà, hỏng đèn đường, tỉa cây xanh.<br>
+                            🌧️ <strong>Mùa mưa bão:</strong> Cảnh báo ngập lụt, bản đồ cống thoát nước.<br>
+                            🚗 <strong>Dịch vụ công:</strong> Đặt lịch đăng kiểm, nộp hồ sơ xin phép thi công.<br><br>
+                            Bạn cần tôi hỗ trợ vấn đề gì hôm nay?
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 border-top bg-white rounded-bottom">
+                    <div class="mb-3 d-flex gap-2 flex-wrap" id="suggestions">
+                        <button class="btn btn-sm btn-outline-primary suggestion rounded-pill">Báo cáo ổ gà</button>
+                        <button class="btn btn-sm btn-outline-primary suggestion rounded-pill">Đèn đường bị tắt</button>
+                        <button class="btn btn-sm btn-outline-primary suggestion rounded-pill">Xem bản đồ ngập lụt</button>
+                        <button class="btn btn-sm btn-outline-primary suggestion rounded-pill">Xin giấy phép thi công</button>
+                        <button class="btn btn-sm btn-outline-primary suggestion rounded-pill">Đặt lịch đăng kiểm</button>
+                    </div>
+                    
+                    <div class="input-group shadow-sm rounded">
+                        <input type="text" id="msg-input" class="form-control border-end-0" placeholder="Nhập câu hỏi của bạn vào đây..." autocomplete="off">
+                        <button class="btn btn-primary px-4" id="send-btn"><i class="bi bi-send-fill"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white fw-bold py-3">
+                <i class="bi bi-lightning-charge-fill text-warning me-1"></i> Câu hỏi phổ biến
+            </div>
+            <div class="card-body p-0" id="faq-list">
+                <div class="p-4 text-center text-muted small">
+                    <div class="spinner-border spinner-border-sm mb-2" role="status"></div><br>
+                    Đang tải danh sách...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-<table>
-    <tr><th>Câu hỏi</th><th>Trả lời</th></tr>
-    {% for item in history %}
-    <tr>
-        <td>{{ item.question }}</td>
-        <td>{{ item.answer }}</td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="2">Chưa có lịch sử hội thoại.</td></tr>
-    {% endfor %}
-</table>
+{% block extra_js %}
+<script>
+const sessionId = 'sess_' + Date.now();
+const chatBox = document.getElementById('chat-box');
+const input = document.getElementById('msg-input');
 
-<p style="margin-top:16px;"><a href="/chatbot/ask/">Hỏi tiếp</a></p>
+function addMsg(text, sender) {
+    const div = document.createElement('div');
+    div.className = `msg-${sender} mb-3`;
+    div.innerHTML = `<div class="bubble">${text}</div>`;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function sendMsg(text) {
+    if (!text.trim()) return;
+    
+    // Thêm tin nhắn của user
+    addMsg(text, 'user');
+    input.value = '';
+    
+    // Ẩn khu vực gợi ý sau khi người dùng bắt đầu chat
+    const suggestionsDiv = document.getElementById('suggestions');
+    if(suggestionsDiv) suggestionsDiv.style.display = 'none';
+    
+    // Gọi API
+    try {
+        const resp = await fetch('{% url "chatbot:api" %}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({message: text, session_id: sessionId})
+        });
+        const data = await resp.json();
+        addMsg(data.reply, 'bot');
+    } catch (error) {
+        addMsg("Xin lỗi, hệ thống đang bận. Vui lòng thử lại sau.", 'bot');
+    }
+}
+
+// Xử lý sự kiện gửi tin nhắn
+document.getElementById('send-btn').addEventListener('click', () => sendMsg(input.value));
+input.addEventListener('keypress', e => { if(e.key === 'Enter') sendMsg(input.value); });
+document.querySelectorAll('.suggestion').forEach(b => b.addEventListener('click', () => sendMsg(b.textContent)));
+
+// Load FAQ
+fetch('{% url "chatbot:questions" %}')
+    .then(r => r.json())
+    .then(data => {
+        const el = document.getElementById('faq-list');
+        if (!data.questions || !data.questions.length) { 
+            el.innerHTML = '<div class="p-4 text-center text-muted small">Chưa có câu hỏi nào</div>'; 
+            return; 
+        }
+        el.innerHTML = data.questions.map(q => 
+            `<div class="p-3 border-bottom faq-item">
+                <a href="#" class="text-decoration-none text-dark small faq-q fw-medium" data-q="${q.question}">
+                    <i class="bi bi-question-circle text-primary me-2"></i>${q.question}
+                </a>
+            </div>`
+        ).join('');
+        
+        // Gắn event cho các câu FAQ
+        document.querySelectorAll('.faq-q').forEach(a => a.addEventListener('click', e => { 
+            e.preventDefault(); 
+            sendMsg(a.dataset.q); 
+        }));
+    })
+    .catch(err => {
+        document.getElementById('faq-list').innerHTML = '<div class="p-3 text-muted small text-center">Lỗi tải câu hỏi</div>';
+    });
+</script>
+
+<style>
+/* Thêm một chút hover effect cho FAQ */
+.faq-item:hover { background-color: #f8f9fa; transition: 0.2s; }
+.faq-item a:hover { color: #0d6efd !important; }
+</style>
 {% endblock %}

@@ -1,14 +1,165 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h4 class="fw-bold mb-4">{{ page_title }}</h4>
-{% if form %}
-<div class="card" style="max-width:700px"><div class="card-body">
-<form method="post" enctype="multipart/form-data">{% csrf_token %}
-{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
-<button type="submit" class="btn btn-primary">Lưu</button> <a href="javascript:history.back()" class="btn btn-outline-secondary">Hủy</a>
-</form>
-</div></div>
-{% else %}
-<div class="card"><div class="card-body"><p class="text-muted">Nội dung trang {{ page_title }}</p></div></div>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Danh sách hạ tầng</h4>
+    <p class="text-muted mb-0">Quản lý cầu, hầm, cống và các công trình hạ tầng khác</p>
+  </div>
+  {% if user.is_staff %}
+  <a href="{% url 'infrastructure:infra_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>Thêm hạ tầng
+  </a>
+  {% endif %}
+</div>
+
+<!-- Filter Card -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-sm-4">
+        <input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Tìm theo tên hoặc mã...">
+      </div>
+      <div class="col-sm-3">
+        <select name="type" class="form-select form-select-sm">
+          <option value="">Tất cả loại</option>
+          {% for t in types %}
+          <option value="{{ t.pk }}" {% if request.GET.type == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tất cả trạng thái</option>
+          <option value="good" {% if request.GET.status == 'good' %}selected{% endif %}>Tốt</option>
+          <option value="normal" {% if request.GET.status == 'normal' %}selected{% endif %}>Bình thường</option>
+          <option value="needs_repair" {% if request.GET.status == 'needs_repair' %}selected{% endif %}>Cần sửa chữa</option>
+          <option value="critical" {% if request.GET.status == 'critical' %}selected{% endif %}>Nguy hiểm</option>
+        </select>
+      </div>
+      <div class="col-sm-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">
+          <i class="bi bi-search me-1"></i>Lọc
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Infrastructures Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Mã</th>
+            <th>Tên</th>
+            <th>Loại</th>
+            <th>Trạng thái</th>
+            <th>Ngày lắp đặt</th>
+            <th>Khu vực</th>
+            <th class="pe-3">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for infra in page_obj %}
+          <tr>
+            <td class="ps-3 text-muted fw-medium">{{ infra.code }}</td>
+            <td class="fw-medium">{{ infra.name }}</td>
+            <td>
+              <span class="badge bg-light text-dark">{{ infra.type.name }}</span>
+            </td>
+            <td>
+              {% with status=infra.status %}
+                {% if status == 'good' %}
+                  <span class="badge text-bg-success">Tốt</span>
+                {% elif status == 'normal' %}
+                  <span class="badge text-bg-info">Bình thường</span>
+                {% elif status == 'needs_repair' %}
+                  <span class="badge text-bg-warning text-dark">Cần sửa chữa</span>
+                {% elif status == 'critical' %}
+                  <span class="badge text-bg-danger">Nguy hiểm</span>
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>
+              <small>
+                {% if infra.installed_date %}
+                  {{ infra.installed_date|date:"d/m/Y" }}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </small>
+            </td>
+            <td>
+              <small>{{ infra.zone.name|default:"N/A" }}</small>
+            </td>
+            <td class="pe-3">
+              <div class="btn-group btn-group-sm" role="group">
+                <a href="{% url 'infrastructure:infra_detail' infra.pk %}" class="btn btn-outline-secondary" title="Xem chi tiết">
+                  <i class="bi bi-eye"></i>
+                </a>
+                {% if user.is_staff %}
+                <a href="{% url 'infrastructure:infra_edit' infra.pk %}" class="btn btn-outline-primary" title="Chỉnh sửa">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-5">
+              <div class="text-muted mb-2">Không có hạ tầng nào</div>
+              {% if user.is_staff %}
+              <a href="{% url 'infrastructure:infra_create' %}" class="btn btn-sm btn-primary">
+                Thêm hạ tầng mới
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?page=1">Đầu</a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Trước</a>
+    </li>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+      <li class="page-item active">
+        <span class="page-link">{{ num }}</span>
+      </li>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+      </li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}">Tiếp</a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Cuối</a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
 {% endif %}
 {% endblock %}

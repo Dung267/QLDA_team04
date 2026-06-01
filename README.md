@@ -55,6 +55,9 @@ python manage.py migrate
 ### 6. Tạo dữ liệu mẫu
 ```bash
 python manage.py loaddata fixtures/initial_data.json
+
+python manage.py seed_data
+
 # Hoặc tạo superuser:
 python manage.py createsuperuser
 ```

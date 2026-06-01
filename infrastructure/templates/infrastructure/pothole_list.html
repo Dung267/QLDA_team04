@@ -1,25 +1,165 @@
 {% extends "base.html" %}
-{% block title %}Danh sách ổ gà{% endblock %}
+
 {% block content %}
-<h2>Danh sách ổ gà</h2>
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Đường</th>
-        <th>Mức độ</th>
-        <th>Trạng thái</th>
-        <th>Tọa độ</th>
-    </tr>
-    {% for pothole in potholes %}
-    <tr>
-        <td>{{ pothole.id }}</td>
-        <td>{{ pothole.road }}</td>
-        <td>{{ pothole.severity }}</td>
-        <td>{{ pothole.status }}</td>
-        <td>{{ pothole.latitude }}, {{ pothole.longitude }}</td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="5">Chưa có dữ liệu.</td></tr>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <div>
+    <h4 class="fw-bold mb-1">Danh sách ổ gà</h4>
+    <p class="text-muted mb-0">Quản lý các ổ gà trên tuyến đường</p>
+  </div>
+  {% if user.is_staff %}
+  <a href="{% url 'infrastructure:pothole_create' 0 %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-circle me-1"></i>Thêm ổ gà
+  </a>
+  {% endif %}
+</div>
+
+<!-- Filter Card -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-sm-4">
+        <input type="text" name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" placeholder="Tìm theo đường...">
+      </div>
+      <div class="col-sm-3">
+        <select name="severity" class="form-select form-select-sm">
+          <option value="">Tất cả mức độ</option>
+          <option value="minor" {% if request.GET.severity == 'minor' %}selected{% endif %}>Nhẹ</option>
+          <option value="moderate" {% if request.GET.severity == 'moderate' %}selected{% endif %}>Trung bình</option>
+          <option value="severe" {% if request.GET.severity == 'severe' %}selected{% endif %}>Nghiêm trọng</option>
+          <option value="critical" {% if request.GET.severity == 'critical' %}selected{% endif %}>Rất nghiêm trọng</option>
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tất cả trạng thái</option>
+          <option value="no" {% if request.GET.status == 'no' %}selected{% endif %}>Chưa sửa</option>
+          <option value="yes" {% if request.GET.status == 'yes' %}selected{% endif %}>Đã sửa</option>
+        </select>
+      </div>
+      <div class="col-sm-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">
+          <i class="bi bi-search me-1"></i>Lọc
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Potholes Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Tuyến đường</th>
+            <th>Mô tả</th>
+            <th>Mức độ</th>
+            <th>Tọa độ</th>
+            <th>Đã sửa</th>
+            <th>Ngày báo</th>
+            <th class="pe-3">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pothole in page_obj %}
+          <tr>
+            <td class="ps-3 fw-medium">{{ pothole.road.name }}</td>
+            <td>
+              <small>{{ pothole.description|truncatechars:60 }}</small>
+            </td>
+            <td>
+              {% with severity=pothole.severity %}
+                {% if severity == 'minor' %}
+                  <span class="badge text-bg-info">Nhẹ</span>
+                {% elif severity == 'moderate' %}
+                  <span class="badge text-bg-warning text-dark">Trung bình</span>
+                {% elif severity == 'severe' %}
+                  <span class="badge text-bg-danger">Nghiêm trọng</span>
+                {% elif severity == 'critical' %}
+                  <span class="badge text-bg-danger">Rất nghiêm trọng</span>
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>
+              <small class="text-muted">
+                {% if pothole.latitude and pothole.longitude %}
+                  {{ pothole.latitude|floatformat:4 }}, {{ pothole.longitude|floatformat:4 }}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </small>
+            </td>
+            <td>
+              {% if pothole.is_repaired %}
+                <span class="badge text-bg-success">✓ Đã sửa</span>
+              {% else %}
+                <span class="badge text-bg-secondary">✗ Chưa sửa</span>
+              {% endif %}
+            </td>
+            <td>
+              <small>{{ pothole.created_at|date:"d/m/Y" }}</small>
+            </td>
+            <td class="pe-3">
+              <div class="btn-group btn-group-sm" role="group">
+                <a href="{% url 'infrastructure:pothole_detail' pothole.pk %}" class="btn btn-outline-secondary" title="Xem chi tiết">
+                  <i class="bi bi-eye"></i>
+                </a>
+                {% if user.is_staff %}
+                <a href="{% url 'infrastructure:pothole_edit' pothole.pk %}" class="btn btn-outline-primary" title="Chỉnh sửa">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-5">
+              <div class="text-muted mb-2">Không có ổ gà nào</div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+    <li class="page-item">
+      <a class="page-link" href="?page=1">Đầu</a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Trước</a>
+    </li>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+      <li class="page-item active">
+        <span class="page-link">{{ num }}</span>
+      </li>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+      </li>
+      {% endif %}
     {% endfor %}
-</table>
+
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}">Tiếp</a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Cuối</a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
 {% endblock %}

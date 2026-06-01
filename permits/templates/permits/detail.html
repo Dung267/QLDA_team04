@@ -101,52 +101,61 @@
         </div>
     </div>
     {% if request.user.is_manager %}
-        <div class="card border-primary shadow-sm mt-3">
-            <div class="card-header bg-primary-subtle border-primary">
-                <h6 class="mb-0 fw-bold">Khu vuc danh rieng cho Can bo</h6>
+        <div class="card border-primary shadow-sm mt-4 mb-5">
+            <div class="card-header bg-primary text-white d-flex align-items-center">
+                <i class="bi bi-shield-lock-fill me-2 fs-5"></i>
+                <h6 class="mb-0 fw-bold">Bảng điều khiển dành cho Cán bộ</h6>
             </div>
-            <div class="card-body">
-                <p class="mb-3">
-                    <strong>Can bo phu trach hien tai:</strong>
-                    {% if permit.assigned_reviewer %}
-                        {% firstof permit.assigned_reviewer.get_full_name permit.assigned_reviewer.username %}
-                    {% else %}
-                        Chua co
-                    {% endif %}
-                </p>
-                <div class="d-flex flex-wrap gap-2">
-                    {% if permit.status == 'submitted' %}
-                        <form method="post"
-                              action="{% url 'permits:process' permit.pk %}"
-                              class="m-0">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="receive" />
-                            <button type="submit" class="btn btn-info text-white">
-                                <i class="bi bi-inbox-fill me-1"></i>Tiep nhan ho so
+            <div class="card-body p-4">
+                <form method="post" action="{% url 'permits:process' permit.pk %}">
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 bg-light rounded border">
+                                <p class="mb-2 small text-muted">Cán bộ phụ trách hiện tại</p>
+                                <div class="fw-bold text-dark mb-3">
+                                    <i class="bi bi-person-badge me-1"></i>
+                                    {% if permit.assigned_reviewer %}
+                                        {% firstof permit.assigned_reviewer.get_full_name permit.assigned_reviewer.username %}
+                                    {% else %}
+                                        Chưa có người tiếp nhận
+                                    {% endif %}
+                                </div>
+                                
+                                <p class="mb-1 small text-muted">Trạng thái hồ sơ trên hệ thống</p>
+                                <div><span class="badge text-bg-secondary">{{ permit.get_status_display }}</span></div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold">Thao tác xử lý <span class="text-danger">*</span></label>
+                            <select name="action" class="form-select border-primary shadow-sm" required>
+                                <option value="" disabled selected>--- Chọn thao tác ---</option>
+                                <option value="receive">Tiếp nhận hồ sơ (Chuyển sang Đang xử lý)</option>
+                                <option value="request_info">Yêu cầu bổ sung giấy tờ</option>
+                                <option value="approve">Đồng ý Cấp phép xây dựng</option>
+                                <option value="reject">Từ chối Cấp phép</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="officer_note" class="form-label fw-bold">Nội dung ghi chú / Yêu cầu / Lý do từ chối</label>
+                            <textarea name="note" id="officer_note" class="form-control" rows="3" placeholder="Nhập lý do cụ thể nếu yêu cầu bổ sung hoặc từ chối hồ sơ..."></textarea>
+                            <div class="form-text text-muted">
+                                <i class="bi bi-info-circle me-1"></i>Nội dung này sẽ được hiển thị cho người dân hoặc nhà thầu xem để khắc phục.
+                            </div>
+                        </div>
+
+                        <div class="col-12 text-end">
+                            <hr class="mt-0 mb-3">
+                            <button type="submit" class="btn btn-primary px-4 fw-bold">
+                                <i class="bi bi-save2-fill me-2"></i>Cập nhật tiến độ
                             </button>
-                        </form>
-                    {% endif %}
-                    {% if permit.status == 'reviewing' %}
-                        <form method="post"
-                              action="{% url 'permits:process' permit.pk %}"
-                              class="m-0">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="approve" />
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-check-circle-fill me-1"></i>Dong y Cap phep
-                            </button>
-                        </form>
-                        <form method="post"
-                              action="{% url 'permits:process' permit.pk %}"
-                              class="m-0">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="reject" />
-                            <button type="submit" class="btn btn-danger">
-                                <i class="bi bi-x-circle-fill me-1"></i>Tu choi Cap phep
-                            </button>
-                        </form>
-                    {% endif %}
-                </div>
+                        </div>
+                        
+                    </div>
+                </form>
             </div>
         </div>
     {% endif %}
